@@ -10,6 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase (compat): login Google + banco Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -218,6 +222,13 @@
                     </span>
                     <button onclick="alternarSessaoGestor()" class="text-tbx-steel hover:underline text-[10px] font-bold" id="btnSessaoAcao">Desbloquear</button>
                 </div>
+                <div class="flex items-center justify-between pt-1 border-t border-tbx-border/40 text-[11px] gap-2">
+                    <span class="text-slate-400 flex items-center space-x-1 min-w-0">
+                        <i data-lucide="user" class="w-3 h-3 text-slate-400 flex-shrink-0"></i>
+                        <span id="labelUsuarioLogado" class="truncate">-</span>
+                    </span>
+                    <button onclick="sairDoSistema()" class="text-slate-400 hover:text-tbx-red text-[10px] font-bold flex-shrink-0">Sair</button>
+                </div>
             </div>
         </div>
     </aside>
@@ -248,6 +259,10 @@
 
             <!-- SELETOR DE MÊS E RELÓGIO -->
             <div class="flex items-center space-x-3">
+                <div id="indicadorSync" class="flex items-center space-x-1.5 text-[11px] bg-tbx-card px-2.5 py-1 rounded-lg border border-tbx-border" title="Status de sincronização com a nuvem (Firebase)">
+                    <span id="indicadorSyncPonto" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span id="indicadorSyncTexto" class="text-slate-300 font-semibold">Conectando...</span>
+                </div>
                 <div class="flex items-center space-x-1.5 bg-tbx-card px-2.5 py-1 rounded-lg border border-tbx-border text-xs">
                     <i data-lucide="calendar" class="w-3.5 h-3.5 text-tbx-steel"></i>
                     <input type="month" id="globalMesFiltro" onchange="alterarMesCompetencia(this.value)" class="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer">
@@ -266,7 +281,7 @@
             <!-- 1. ABA DASHBOARD -->
             <section id="view-dashboard" class="space-y-6">
                 <div class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
-                    <strong>Atenção:</strong> os dados ficam armazenados neste navegador e neste computador. Faça backups regularmente antes de importar arquivos ou excluir históricos. Os registros de demonstração devem ser substituídos pelos dados reais da fábrica.
+                    <strong>Dados na nuvem:</strong> os registros são salvos no Firebase e compartilhados em tempo real entre todos os computadores conectados. Se a rede cair, os apontamentos ficam guardados neste PC e sobem quando a conexão voltar. Mesmo assim, baixe um backup (.JSON) periodicamente.
                 </div>
                 <!-- CARDS DE METAS E EFICIÊNCIA -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1328,11 +1343,11 @@
                         <div class="bg-tbx-card p-5 rounded-2xl border border-tbx-border space-y-4">
                             <h3 class="text-sm font-bold text-white flex items-center space-x-2">
                                 <i data-lucide="database" class="w-4 h-4 text-tbx-steel"></i>
-                                <span>Armazenamento Local & Backup</span>
+                                <span>Banco na Nuvem (Firebase) & Backup</span>
                             </h3>
                             <div class="space-y-2 text-xs">
                                 <div class="flex justify-between border-b border-tbx-border/40 pb-2">
-                                    <span class="text-slate-400">Tamanho no Navegador:</span>
+                                    <span class="text-slate-400">Tamanho dos Dados:</span>
                                     <strong class="text-white font-mono" id="dadosTamanhoStorage">0 KB</strong>
                                 </div>
                                 <div class="flex justify-between border-b border-tbx-border/40 pb-2">
@@ -1356,6 +1371,10 @@
                                         <input type="file" id="inputImportarBackup" accept=".json" onchange="importarBackupJson(event)" class="hidden">
                                     </label>
                                 </div>
+                                <button id="btnEnviarDadosLocais" onclick="enviarDadosLocaisParaNuvem()" class="hidden w-full py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center justify-center space-x-1.5">
+                                    <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                                    <span>Enviar dados salvos neste computador para a nuvem</span>
+                                </button>
                             </div>
                         </div>
 
@@ -1710,6 +1729,30 @@
         </div>
     </div>
 
+    <!-- TELA DE ACESSO (LOGIN GOOGLE / CARREGAMENTO) -->
+    <div id="telaAcesso" class="fixed inset-0 z-[60] bg-tbx-bg flex items-center justify-center p-4">
+        <div class="bg-tbx-card w-full max-w-sm rounded-2xl border border-tbx-border shadow-2xl p-7 space-y-5 text-center glow-red">
+            <div class="flex flex-col items-center space-y-2">
+                <div class="flex items-center tracking-wider text-xs font-semibold text-slate-300">
+                    <span class="tracking-[0.2em] font-light">GRUPO</span>
+                    <div class="h-6 w-0.5 bg-tbx-red mx-2"></div>
+                    <span class="text-xl font-black tracking-tight text-white font-mono">TBX</span>
+                </div>
+                <div class="text-sm font-bold text-white">PRODFLOW MES/PCP</div>
+            </div>
+            <div id="telaAcessoSpinner" class="mx-auto w-8 h-8 border-2 border-tbx-border border-t-tbx-red rounded-full animate-spin"></div>
+            <p id="telaAcessoMensagem" class="text-xs text-slate-300 leading-relaxed">Conectando...</p>
+            <button id="btnEntrarGoogle" type="button" onclick="entrarComGoogle()" class="hidden w-full py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 border border-slate-300 transition-all">
+                <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+                <span>Entrar com Google</span>
+            </button>
+            <button id="btnTentarNovamente" type="button" onclick="location.reload()" class="hidden w-full py-2.5 rounded-xl bg-tbx-red hover:bg-tbx-redHover text-white font-bold text-xs transition-all">
+                Tentar novamente
+            </button>
+            <p class="text-[10px] text-slate-500">Acesso restrito a contas @grupotbx.com.br</p>
+        </div>
+    </div>
+
     <!-- TOAST DE NOTIFICAÇÃO -->
     <div id="toastApp" class="fixed bottom-5 right-5 bg-tbx-card border border-tbx-border text-white text-xs px-4 py-3 rounded-xl shadow-2xl z-50 hidden flex items-center space-x-2">
         <span id="toastIcon"></span>
@@ -1798,184 +1841,628 @@
             try { temaSalvo = localStorage.getItem(THEME_STORAGE_KEY) || 'dark'; } catch (e) {}
             document.body.classList.toggle('theme-light', temaSalvo === 'light');
             aplicarTema(temaSalvo);
-            carregarDadosStorage();
+            prepararEstadoInicial();
             inicializarDataTurnoEHoras();
             lucide.createIcons();
-            trocarAba(state.currentTab || 'dashboard');
             setInterval(atualizarRelogioETurnos, 1000);
+            setInterval(() => { if (renderRemotoPendente) executarRenderRemoto(); }, 1500);
+            window.addEventListener('online', atualizarIndicadorSync);
+            window.addEventListener('offline', atualizarIndicadorSync);
+            window.addEventListener('beforeunload', e => {
+                if (gravacoesPendentes > 0) { e.preventDefault(); e.returnValue = ''; }
+            });
+            iniciarAutenticacao();
         });
 
-        function carregarDadosStorage() {
+        /* =====================================================================
+           FIREBASE — banco de dados compartilhado (Firestore) + login Google
+           ---------------------------------------------------------------------
+           Estrutura no Firestore:
+             config/{produtos|ops|motivosParada|metasMensais|notasApresentacao|pinSeguranca}  -> { valor: ... }
+             heijunka/{AAAA-MM}        -> grade de programação do mês
+             apontamentos/{id}         -> um documento por apontamento (produção, HHT, parada)
+             diarioBordo/{id}          -> um documento por ocorrência
+           Preferências de tela (mês, filtro, aba) continuam salvas só neste navegador.
+           ===================================================================== */
+        const firebaseConfig = {
+            apiKey: "AIzaSyDO77eY5MoPqXImv-6QBfqMZvCRp4WslY0",
+            authDomain: "prodflow-5de54.firebaseapp.com",
+            projectId: "prodflow-5de54",
+            storageBucket: "prodflow-5de54.firebasestorage.app",
+            messagingSenderId: "790491050112",
+            appId: "1:790491050112:web:ba6718a3e604fa4e1bf665",
+            measurementId: "G-H6LNKZZY0T"
+        };
+
+        const DOMINIO_PERMITIDO = '@grupotbx.com.br';
+        const PREFS_STORAGE_KEY = 'PRODFLOW_MES_PREFS';
+        const LEGADO_ENVIADO_KEY = STORAGE_KEY + '_ENVIADO_NUVEM';
+        const CHAVES_CONFIG = ['produtos', 'ops', 'motivosParada', 'metasMensais', 'notasApresentacao', 'pinSeguranca'];
+        const CHAVES_PREFERENCIAS = ['mesCompetencia', 'filtroSegmento', 'currentTab', 'modoEvolucaoLinha'];
+        const COLECOES_SYNC = ['config', 'heijunka', 'apontamentos', 'diarioBordo'];
+        const LIMITE_EXCLUSAO_SEM_AUTORIZACAO = 20;
+
+        let fbAuth = null;
+        let fbDb = null;
+        let usuarioAtual = null;
+        let appPronto = false;
+        let sincronizacaoAtiva = false;
+        let cancelarListeners = [];
+        let primeiraCarga = {};
+        const docsSincronizados = new Map(); // caminho do documento -> conteúdo (JSON) já salvo na nuvem
+        let gravacoesPendentes = 0;
+        let erroUltimaGravacao = false;
+        let exclusaoEmMassaAutorizada = false;
+        let mensagemAcessoPendente = '';
+        let timerRenderRemoto = null;
+        let renderRemotoPendente = false;
+
+        /* ---------- Estado inicial e preferências locais ---------- */
+        function prepararEstadoInicial() {
+            state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            // Base vazia: nada de dados de demonstração no banco compartilhado.
+            state.ops = [];
+            state.metasMensais = {};
+            state.notasApresentacao = {};
+            state.gradesHeijunka = {};
+            state.apontamentos = [];
+            state.diarioBordo = [];
+            state.userRole = 'Operador';
+            state.mesCompetencia = formatarDataLocalIso(new Date()).slice(0, 7);
+            carregarPreferenciasLocais();
+            sincronizarControlesDePreferencia();
+        }
+
+        function carregarPreferenciasLocais() {
             try {
-                const salvo = localStorage.getItem(STORAGE_KEY);
-                if (salvo) {
-                    state = Object.assign({}, DEFAULT_STATE, JSON.parse(salvo));
-                    // Sessão de gestor é temporária e nunca deve ser restaurada do armazenamento.
-                    state.userRole = 'Operador';
-                } else {
-                    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-                    gerarMockInicial();
-                    salvarDadosStorage();
+                const prefs = JSON.parse(localStorage.getItem(PREFS_STORAGE_KEY) || '{}');
+                CHAVES_PREFERENCIAS.forEach(k => { if (prefs[k]) state[k] = prefs[k]; });
+            } catch (e) { /* preferências são opcionais */ }
+        }
+
+        function salvarPreferenciasLocais() {
+            try {
+                const prefs = {};
+                CHAVES_PREFERENCIAS.forEach(k => { prefs[k] = state[k]; });
+                localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+            } catch (e) { /* sem acesso ao localStorage */ }
+        }
+
+        function sincronizarControlesDePreferencia() {
+            const inputMes = document.getElementById('globalMesFiltro');
+            if (inputMes) inputMes.value = state.mesCompetencia;
+            const selSeg = document.getElementById('filtroGlobalSegmento');
+            if (selSeg) selSeg.value = state.filtroSegmento || 'TODAS';
+        }
+
+        /* ---------- Tela de acesso (login / carregando / erro) ---------- */
+        function mostrarTelaAcesso(modo, mensagem) {
+            const tela = document.getElementById('telaAcesso');
+            if (!tela) return;
+            if (modo === 'oculto') { tela.classList.add('hidden'); return; }
+            tela.classList.remove('hidden');
+            document.getElementById('telaAcessoSpinner')?.classList.toggle('hidden', modo !== 'carregando');
+            document.getElementById('btnEntrarGoogle')?.classList.toggle('hidden', modo !== 'login');
+            document.getElementById('btnTentarNovamente')?.classList.toggle('hidden', modo !== 'erro');
+            const msg = document.getElementById('telaAcessoMensagem');
+            if (msg) {
+                msg.textContent = mensagem || (modo === 'login' ? 'Entre com sua conta corporativa para acessar o sistema.' : '');
+                msg.className = `text-xs leading-relaxed ${modo === 'erro' ? 'text-amber-300' : 'text-slate-300'}`;
+            }
+        }
+
+        function atualizarUsuarioSidebar() {
+            const lbl = document.getElementById('labelUsuarioLogado');
+            if (!lbl) return;
+            lbl.textContent = usuarioAtual ? (usuarioAtual.email || usuarioAtual.displayName || '-') : '-';
+            lbl.title = lbl.textContent;
+        }
+
+        /* ---------- Autenticação ---------- */
+        function inicializarFirebase() {
+            if (typeof firebase === 'undefined') {
+                mostrarTelaAcesso('erro', 'Não foi possível carregar o Firebase. Verifique a conexão com a internet e tente novamente.');
+                return false;
+            }
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            fbAuth = firebase.auth();
+            fbDb = firebase.firestore();
+            fbDb.settings({ ignoreUndefinedProperties: true });
+            // Cache offline: se a rede cair, os apontamentos ficam guardados neste PC e sobem quando voltar.
+            fbDb.enablePersistence({ synchronizeTabs: true }).catch(err => {
+                console.warn('Cache offline do Firestore indisponível:', err.code || err);
+            });
+            return true;
+        }
+
+        function iniciarAutenticacao() {
+            if (location.protocol === 'file:') {
+                mostrarTelaAcesso('erro', 'O login Google não funciona abrindo o arquivo direto do computador. Abra o sistema pelo endereço publicado (GitHub Pages).');
+                return;
+            }
+            if (!inicializarFirebase()) return;
+            mostrarTelaAcesso('carregando', 'Verificando login...');
+
+            fbAuth.getRedirectResult().catch(err => tratarErroLogin(err));
+
+            fbAuth.onAuthStateChanged(async user => {
+                if (!user) {
+                    usuarioAtual = null;
+                    atualizarUsuarioSidebar();
+                    pararSincronizacao();
+                    mostrarTelaAcesso('login', mensagemAcessoPendente);
+                    mensagemAcessoPendente = '';
+                    return;
                 }
-            } catch (e) {
-                console.error('Erro ao carregar do Storage:', e);
-                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-                gerarMockInicial();
+                const email = (user.email || '').toLowerCase();
+                if (!email.endsWith(DOMINIO_PERMITIDO)) {
+                    mensagemAcessoPendente = `Acesso permitido apenas para contas ${DOMINIO_PERMITIDO}. Você entrou com ${user.email || 'outra conta'}.`;
+                    await fbAuth.signOut();
+                    return;
+                }
+                usuarioAtual = user;
+                atualizarUsuarioSidebar();
+                mostrarTelaAcesso('carregando', 'Carregando dados da fábrica...');
+                iniciarSincronizacao();
+            });
+        }
+
+        function entrarComGoogle() {
+            if (!fbAuth) return;
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ hd: DOMINIO_PERMITIDO.slice(1), prompt: 'select_account' });
+            mostrarTelaAcesso('carregando', 'Abrindo o login do Google...');
+            fbAuth.signInWithPopup(provider).catch(err => {
+                if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
+                    return fbAuth.signInWithRedirect(provider).catch(tratarErroLogin);
+                }
+                tratarErroLogin(err);
+            });
+        }
+
+        function tratarErroLogin(err) {
+            if (!err) return;
+            console.error('Erro de login:', err);
+            const mensagens = {
+                'auth/popup-closed-by-user': '',
+                'auth/cancelled-popup-request': '',
+                'auth/unauthorized-domain': `Este endereço (${location.hostname}) não está autorizado no Firebase. Adicione-o em Authentication → Settings → Authorized domains.`,
+                'auth/operation-not-allowed': 'O login com Google não está ativado no projeto. Ative em Authentication → Sign-in method → Google.',
+                'auth/network-request-failed': 'Sem conexão com a internet. Verifique a rede e tente novamente.'
+            };
+            const texto = Object.prototype.hasOwnProperty.call(mensagens, err.code) ? mensagens[err.code] : `Falha no login: ${err.message || err.code}`;
+            mostrarTelaAcesso('login', texto);
+        }
+
+        function sairDoSistema() {
+            if (gravacoesPendentes > 0 && !window.confirm('Ainda há dados sendo enviados para a nuvem. Sair mesmo assim?')) return;
+            if (!window.confirm('Deseja sair do sistema?')) return;
+            state.userRole = 'Operador';
+            atualizarStatusSessao();
+            if (fbAuth) fbAuth.signOut();
+        }
+
+        /* ---------- Leitura em tempo real ---------- */
+        function iniciarSincronizacao() {
+            pararSincronizacao();
+            sincronizacaoAtiva = true;
+            appPronto = false;
+            primeiraCarga = {};
+            docsSincronizados.clear();
+            atualizarIndicadorSync();
+
+            COLECOES_SYNC.forEach(col => {
+                const opcoes = col === 'config' ? { includeMetadataChanges: true } : {};
+                const cancelar = fbDb.collection(col).onSnapshot(
+                    opcoes,
+                    snap => aplicarSnapshotColecao(col, snap),
+                    err => tratarErroSincronizacao(col, err)
+                );
+                cancelarListeners.push(cancelar);
+            });
+        }
+
+        function pararSincronizacao() {
+            cancelarListeners.forEach(cancelar => { try { cancelar(); } catch (e) {} });
+            cancelarListeners = [];
+            sincronizacaoAtiva = false;
+            appPronto = false;
+            atualizarIndicadorSync();
+        }
+
+        function aplicarSnapshotColecao(col, snap) {
+            const prefixo = `${col}/`;
+            for (const caminho of [...docsSincronizados.keys()]) {
+                if (caminho.startsWith(prefixo)) docsSincronizados.delete(caminho);
+            }
+            const docs = snap.docs.map(d => ({ id: d.id, data: d.data() || {} }));
+            docs.forEach(d => docsSincronizados.set(prefixo + d.id, jsonEstavel(d.data)));
+
+            if (col === 'config') {
+                docs.forEach(d => {
+                    if (CHAVES_CONFIG.includes(d.id) && Object.prototype.hasOwnProperty.call(d.data, 'valor')) state[d.id] = d.data.valor;
+                });
+                normalizarEstado();
+            } else if (col === 'heijunka') {
+                const grades = {};
+                docs.forEach(d => { grades[d.id] = d.data; });
+                state.gradesHeijunka = grades;
+            } else if (col === 'apontamentos') {
+                state.apontamentos = ordenarRegistros(docs.map(d => Object.assign({}, d.data, { id: d.id })));
+            } else if (col === 'diarioBordo') {
+                state.diarioBordo = ordenarRegistros(docs.map(d => Object.assign({}, d.data, { id: d.id })));
             }
 
-            if (!state.produtos || state.produtos.length === 0) state.produtos = DEFAULT_STATE.produtos;
-            if (!state.motivosParada || state.motivosParada.length === 0) state.motivosParada = DEFAULT_STATE.motivosParada;
-            if (!state.metasMensais) state.metasMensais = DEFAULT_STATE.metasMensais;
-            if (!state.gradesHeijunka) state.gradesHeijunka = {};
-            if (!state.apontamentos) state.apontamentos = [];
-            if (!state.diarioBordo) state.diarioBordo = [];
+            // Em um computador novo, o cache local vem vazio: espera a resposta do servidor
+            // antes de concluir que o banco está vazio (evita sobrescrever a nuvem).
+            const cargaValida = col !== 'config' || !snap.metadata.fromCache || !snap.empty;
+            if (cargaValida) primeiraCarga[col] = true;
 
-            const inputMes = document.getElementById('globalMesFiltro');
-            if (inputMes) inputMes.value = state.mesCompetencia || '2026-10';
+            if (!appPronto) {
+                if (COLECOES_SYNC.every(c => primeiraCarga[c])) finalizarCargaInicial();
+            } else if (snap.docChanges().length > 0) {
+                agendarRenderRemoto();
+            }
+        }
+
+        function normalizarEstado() {
+            if (!Array.isArray(state.produtos) || state.produtos.length === 0) state.produtos = JSON.parse(JSON.stringify(DEFAULT_STATE.produtos));
+            if (!Array.isArray(state.ops)) state.ops = [];
+            if (!Array.isArray(state.motivosParada) || state.motivosParada.length === 0) state.motivosParada = DEFAULT_STATE.motivosParada.slice();
+            if (!state.metasMensais || typeof state.metasMensais !== 'object') state.metasMensais = {};
+            if (!state.notasApresentacao || typeof state.notasApresentacao !== 'object') state.notasApresentacao = {};
+            if (!state.pinSeguranca) state.pinSeguranca = DEFAULT_PIN;
+            if (!state.gradesHeijunka) state.gradesHeijunka = {};
+            if (!Array.isArray(state.apontamentos)) state.apontamentos = [];
+            if (!Array.isArray(state.diarioBordo)) state.diarioBordo = [];
+        }
+
+        function finalizarCargaInicial() {
+            appPronto = true;
+            normalizarEstado();
+
+            const bancoVazio = ![...docsSincronizados.keys()].some(c => c.startsWith('config/'));
+            if (bancoVazio) {
+                const legado = lerDadosLocaisLegados();
+                const resumo = legado ? resumirDadosLegados(legado) : null;
+                if (resumo && resumo.total > 0 && window.confirm(
+                    `Primeiro acesso ao banco na nuvem.\n\nEste computador tem dados salvos da versão anterior:\n${resumo.texto}\n\nDeseja enviá-los para a nuvem como base inicial?\n\nOK = enviar estes dados · Cancelar = começar com a base vazia`
+                )) {
+                    mesclarDadosLocais(legado, true);
+                    marcarLegadoComoEnviado();
+                }
+            }
+
+            salvarDadosStorage(); // grava os cadastros que ainda não existem na nuvem
+            mostrarTelaAcesso('oculto');
+            atualizarStatusSessao();
+            atualizarIndicadorSync();
+            sincronizarControlesDePreferencia();
+
+            const abasProtegidas = ['heijunka', 'extrato', 'apresentacao', 'pcp'];
+            const abaInicial = abasProtegidas.includes(state.currentTab) && state.userRole !== 'Gestor' ? 'dashboard' : (state.currentTab || 'dashboard');
+            executarTrocaAba(abaInicial);
+        }
+
+        function tratarErroSincronizacao(col, err) {
+            console.error(`Erro ao ler "${col}" do Firestore:`, err);
+            const semPermissao = err && err.code === 'permission-denied';
+            const texto = semPermissao
+                ? 'Sem permissão para acessar os dados no Firestore. Verifique se o banco foi criado e se as regras de segurança foram publicadas.'
+                : `Erro ao conectar ao banco de dados: ${err && (err.message || err.code)}`;
+            if (!appPronto) {
+                pararSincronizacao();
+                mostrarTelaAcesso('erro', texto);
+            } else {
+                erroUltimaGravacao = true;
+                atualizarIndicadorSync();
+                showToast(texto, 'error');
+            }
+        }
+
+        /* Atualiza a tela quando outro computador grava algo, sem atrapalhar quem está digitando. */
+        function agendarRenderRemoto() {
+            clearTimeout(timerRenderRemoto);
+            timerRenderRemoto = setTimeout(executarRenderRemoto, 250);
+        }
+
+        function haEdicaoEmAndamento() {
+            const ativo = document.activeElement;
+            if (ativo && ['INPUT', 'SELECT', 'TEXTAREA'].includes(ativo.tagName)) return true;
+            return ['modalItensDia', 'modalReplicarPadrao', 'modalEditarOp', 'modalEditarProduto', 'modalManutencaoApontamento', 'modalAutenticacaoPin']
+                .some(id => {
+                    const el = document.getElementById(id);
+                    return el && !el.classList.contains('hidden');
+                });
+        }
+
+        function executarRenderRemoto() {
+            if (!appPronto) return;
+            if (haEdicaoEmAndamento()) { renderRemotoPendente = true; return; }
+            renderRemotoPendente = false;
+            executarTrocaAba(state.currentTab || 'dashboard');
+        }
+
+        /* ---------- Gravação: envia só os documentos que mudaram ---------- */
+        function carregarDadosStorage() {
+            prepararEstadoInicial();
         }
 
         function salvarDadosStorage() {
-            try {
-                const snapshot = Object.assign({}, state, { userRole: 'Operador' });
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-            } catch (e) {
-                console.error('Erro ao salvar no LocalStorage:', e);
+            salvarPreferenciasLocais();
+            if (!sincronizacaoAtiva || !appPronto || !fbDb) return;
+
+            const autorizada = exclusaoEmMassaAutorizada;
+            exclusaoEmMassaAutorizada = false;
+
+            const desejados = montarDocumentosDoEstado();
+            const gravacoes = [];
+            const exclusoes = [];
+
+            desejados.forEach((dados, caminho) => {
+                const limpo = JSON.parse(JSON.stringify(dados));
+                const assinatura = jsonEstavel(limpo);
+                if (docsSincronizados.get(caminho) !== assinatura) gravacoes.push({ caminho, dados: limpo, assinatura });
+            });
+            docsSincronizados.forEach((_, caminho) => {
+                if (!desejados.has(caminho)) exclusoes.push(caminho);
+            });
+
+            // Trava de segurança: nunca apagar muitos registros de uma vez sem uma ação explícita (expurgo/restauração).
+            const exclusoesDeRegistros = exclusoes.filter(c => !c.startsWith('config/')).length;
+            let exclusoesPermitidas = exclusoes;
+            if (exclusoesDeRegistros > LIMITE_EXCLUSAO_SEM_AUTORIZACAO && !autorizada) {
+                console.warn(`Exclusão de ${exclusoesDeRegistros} registros bloqueada pela trava de segurança.`);
+                showToast(`Exclusão de ${exclusoesDeRegistros} registros bloqueada por segurança. Nada foi apagado na nuvem.`, 'warning');
+                exclusoesPermitidas = [];
+                // Recarrega da nuvem para a tela voltar a mostrar os registros que não foram apagados.
+                setTimeout(() => { if (usuarioAtual) iniciarSincronizacao(); }, 600);
+            }
+
+            const operacoes = [
+                ...gravacoes.map(g => ({ tipo: 'set', ...g })),
+                ...exclusoesPermitidas.map(caminho => ({ tipo: 'delete', caminho }))
+            ];
+            if (operacoes.length === 0) return;
+
+            operacoes.forEach(op => {
+                if (op.tipo === 'set') docsSincronizados.set(op.caminho, op.assinatura);
+                else docsSincronizados.delete(op.caminho);
+            });
+            gravarOperacoesEmLotes(operacoes);
+        }
+
+        function gravarOperacoesEmLotes(operacoes) {
+            const TAMANHO_LOTE = 400; // o Firestore aceita até 500 operações por lote
+            for (let i = 0; i < operacoes.length; i += TAMANHO_LOTE) {
+                const lote = operacoes.slice(i, i + TAMANHO_LOTE);
+                const batch = fbDb.batch();
+                lote.forEach(op => {
+                    const [colecao, docId] = op.caminho.split('/');
+                    const ref = fbDb.collection(colecao).doc(docId);
+                    if (op.tipo === 'set') batch.set(ref, op.dados);
+                    else batch.delete(ref);
+                });
+                gravacoesPendentes++;
+                atualizarIndicadorSync();
+                batch.commit()
+                    .then(() => {
+                        erroUltimaGravacao = false;
+                    })
+                    .catch(err => {
+                        console.error('Erro ao gravar no Firestore:', err);
+                        erroUltimaGravacao = true;
+                        // Esquece a assinatura para tentar reenviar na próxima gravação.
+                        lote.forEach(op => docsSincronizados.delete(op.caminho));
+                        const motivo = err && err.code === 'permission-denied' ? 'sem permissão (verifique as regras do Firestore)' : (err && (err.message || err.code));
+                        showToast(`Erro ao salvar na nuvem: ${motivo}`, 'error');
+                    })
+                    .finally(() => {
+                        gravacoesPendentes = Math.max(0, gravacoesPendentes - 1);
+                        atualizarIndicadorSync();
+                    });
             }
         }
 
-        function gerarMockInicial() {
-            const mes = '2026-10';
-            const diasMes = [];
-            for (let d = 1; d <= 31; d++) {
-                const diaStr = d.toString().padStart(2, '0');
-                const dataIso = `${mes}-${diaStr}`;
-                const dataObj = new Date(`${dataIso}T12:00:00`);
-                const diaSemana = dataObj.getDay();
-                const ehUtil = (diaSemana !== 0 && diaSemana !== 6);
+        function idDocumentoSeguro(id) {
+            const limpo = String(id).replace(/\//g, '_').trim();
+            return (limpo && limpo !== '.' && limpo !== '..') ? limpo : null;
+        }
 
-                const itensDia = {};
-                let operadores = ehUtil ? 6 : 0;
+        function montarDocumentosDoEstado() {
+            const docs = new Map();
+            CHAVES_CONFIG.forEach(chave => {
+                if (state[chave] !== undefined) docs.set(`config/${chave}`, { valor: state[chave] });
+            });
+            Object.entries(state.gradesHeijunka || {}).forEach(([mes, grade]) => {
+                if (/^\d{4}-\d{2}$/.test(mes) && grade && typeof grade === 'object') docs.set(`heijunka/${mes}`, grade);
+            });
+            (state.apontamentos || []).forEach(a => {
+                const id = a && a.id ? idDocumentoSeguro(a.id) : null;
+                if (id) docs.set(`apontamentos/${id}`, a);
+            });
+            (state.diarioBordo || []).forEach(d => {
+                if (!d || typeof d !== 'object') return;
+                if (!d.id) d.id = `DB-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                const id = idDocumentoSeguro(d.id);
+                if (id) docs.set(`diarioBordo/${id}`, d);
+            });
+            return docs;
+        }
 
-                if (ehUtil) {
-                    itensDia['PRD-1'] = 40;
-                    itensDia['PRD-2'] = 30;
-                    itensDia['PRD-3'] = 15;
-                    itensDia['PRD-4'] = 25;
-                }
+        function jsonEstavel(valor) {
+            if (valor === null || typeof valor !== 'object') return JSON.stringify(valor === undefined ? null : valor);
+            if (Array.isArray(valor)) return `[${valor.map(jsonEstavel).join(',')}]`;
+            return `{${Object.keys(valor).filter(k => valor[k] !== undefined).sort().map(k => `${JSON.stringify(k)}:${jsonEstavel(valor[k])}`).join(',')}}`;
+        }
 
-                diasMes.push({
-                    dia: d,
-                    data: dataIso,
-                    ehUtil: ehUtil,
-                    operadores: operadores,
-                    hht: Number((operadores * 10.5).toFixed(1)),
-                    itens: itensDia
+        function carimboRegistro(registro) {
+            const m = String(registro && registro.id || '').match(/(\d{12,})/);
+            return m ? Number(m[1]) : 0;
+        }
+
+        function ordenarRegistros(lista) {
+            return lista.sort((a, b) =>
+                String(b.data || '').localeCompare(String(a.data || '')) || (carimboRegistro(b) - carimboRegistro(a))
+            );
+        }
+
+        function atualizarIndicadorSync() {
+            const ponto = document.getElementById('indicadorSyncPonto');
+            const texto = document.getElementById('indicadorSyncTexto');
+            if (!ponto || !texto) return;
+            let cor = 'bg-emerald-400';
+            let msg = 'Sincronizado';
+            if (!sincronizacaoAtiva) { cor = 'bg-slate-500'; msg = 'Desconectado'; }
+            else if (!navigator.onLine) { cor = 'bg-amber-400'; msg = gravacoesPendentes > 0 ? 'Offline · salvo neste PC' : 'Offline'; }
+            else if (erroUltimaGravacao) { cor = 'bg-tbx-red'; msg = 'Erro ao salvar'; }
+            else if (gravacoesPendentes > 0) { cor = 'bg-amber-400 animate-pulse'; msg = 'Salvando...'; }
+            else if (!appPronto) { cor = 'bg-slate-500 animate-pulse'; msg = 'Conectando...'; }
+            ponto.className = `w-2 h-2 rounded-full ${cor}`;
+            texto.textContent = msg;
+        }
+
+        /* ---------- Migração dos dados salvos no navegador (versão anterior) ---------- */
+        function lerDadosLocaisLegados() {
+            try {
+                const bruto = localStorage.getItem(STORAGE_KEY);
+                if (!bruto) return null;
+                const dados = JSON.parse(bruto);
+                return dados && typeof dados === 'object' ? dados : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function resumirDadosLegados(legado) {
+            const n = v => Array.isArray(v) ? v.length : 0;
+            const meses = legado.gradesHeijunka && typeof legado.gradesHeijunka === 'object' ? Object.keys(legado.gradesHeijunka).length : 0;
+            const partes = {
+                apontamentos: n(legado.apontamentos),
+                diario: n(legado.diarioBordo),
+                ops: n(legado.ops),
+                produtos: n(legado.produtos)
+            };
+            return {
+                total: partes.apontamentos + partes.diario + partes.ops + partes.produtos + meses,
+                texto: `• ${partes.apontamentos} apontamentos\n• ${partes.diario} ocorrências no diário\n• ${partes.ops} OPs e ${partes.produtos} produtos\n• ${meses} mês(es) de programação Heijunka`
+            };
+        }
+
+        function mesclarDadosLocais(legado, usarComoBase) {
+            const adicionados = { apontamentos: 0, diario: 0, ops: 0, produtos: 0, meses: 0 };
+            const mesclarPorId = (destino, origem, contador) => {
+                const ids = new Set(destino.map(x => x && x.id));
+                (Array.isArray(origem) ? origem : []).forEach(item => {
+                    if (item && item.id && !ids.has(item.id)) {
+                        destino.push(item);
+                        ids.add(item.id);
+                        if (contador) adicionados[contador]++;
+                    }
+                });
+            };
+            const ehObjeto = v => v && typeof v === 'object' && !Array.isArray(v);
+
+            if (usarComoBase) {
+                if (Array.isArray(legado.produtos) && legado.produtos.length) { state.produtos = legado.produtos; adicionados.produtos = legado.produtos.length; }
+                if (Array.isArray(legado.ops)) { state.ops = legado.ops; adicionados.ops = legado.ops.length; }
+                if (Array.isArray(legado.motivosParada) && legado.motivosParada.length) state.motivosParada = legado.motivosParada;
+                if (ehObjeto(legado.metasMensais)) state.metasMensais = legado.metasMensais;
+                if (ehObjeto(legado.notasApresentacao)) state.notasApresentacao = legado.notasApresentacao;
+                if (/^\d{4}$/.test(String(legado.pinSeguranca || ''))) state.pinSeguranca = legado.pinSeguranca;
+            } else {
+                mesclarPorId(state.produtos, legado.produtos, 'produtos');
+                mesclarPorId(state.ops, legado.ops, 'ops');
+                (Array.isArray(legado.motivosParada) ? legado.motivosParada : []).forEach(m => {
+                    if (m && !state.motivosParada.includes(m)) state.motivosParada.push(m);
+                });
+                if (ehObjeto(legado.metasMensais)) Object.entries(legado.metasMensais).forEach(([mes, meta]) => {
+                    if (state.metasMensais[mes] === undefined) state.metasMensais[mes] = meta;
+                });
+                if (ehObjeto(legado.notasApresentacao)) Object.entries(legado.notasApresentacao).forEach(([mes, nota]) => {
+                    if (state.notasApresentacao[mes] === undefined) state.notasApresentacao[mes] = nota;
                 });
             }
-            state.gradesHeijunka[mes] = { dias: diasMes };
 
-            const apontamentosMock = [];
-            for (let d = 1; d <= 9; d++) {
-                const diaStr = d.toString().padStart(2, '0');
-                const dataIso = `${mes}-${diaStr}`;
-                const dataObj = new Date(`${dataIso}T12:00:00`);
-                if (dataObj.getDay() === 0 || dataObj.getDay() === 6) continue;
-
-                apontamentosMock.push({
-                    id: 'AP-' + d + '-1',
-                    data: dataIso,
-                    turno: 'Turno 1',
-                    tipo: 'PRODUCAO',
-                    opId: 'OP-1',
-                    produtoId: 'PRD-1',
-                    linha: 'NACIONAIS',
-                    qtd: 38,
-                    operador: 'Carlos Silva',
-                    tempoPadraoHoras: Number(((38 * 600) / 3600).toFixed(2))
-                });
-                apontamentosMock.push({
-                    id: 'AP-' + d + '-2',
-                    data: dataIso,
-                    turno: 'Turno 1',
-                    tipo: 'PRODUCAO',
-                    opId: 'OP-2',
-                    produtoId: 'PRD-2',
-                    linha: 'PISOS',
-                    qtd: 28,
-                    operador: 'Marcos Souza',
-                    tempoPadraoHoras: Number(((28 * 720) / 3600).toFixed(2))
-                });
-
-                apontamentosMock.push({
-                    id: 'HHT-' + d + '-1',
-                    data: dataIso,
-                    turno: 'Turno 1',
-                    tipo: 'HORAS',
-                    linha: 'NACIONAIS',
-                    operadores: 3,
-                    horasPorOp: 10.5,
-                    totalHht: 31.5,
-                    responsavel: 'Líder Roberto'
-                });
-                apontamentosMock.push({
-                    id: 'HHT-' + d + '-2',
-                    data: dataIso,
-                    turno: 'Turno 1',
-                    tipo: 'HORAS',
-                    linha: 'PISOS',
-                    operadores: 3,
-                    horasPorOp: 10.5,
-                    totalHht: 31.5,
-                    responsavel: 'Líder Roberto'
-                });
-
-                if (d % 3 === 0) {
-                    apontamentosMock.push({
-                        id: 'PAR-' + d,
-                        data: dataIso,
-                        turno: 'Turno 1',
-                        tipo: 'PARADA',
-                        linha: 'NACIONAIS',
-                        duracaoMinutos: 40,
-                        motivo: 'Troca de Molde / Setup',
-                        responsavel: 'Manutenção / Chão de Fábrica',
-                        obs: 'Troca rápida de molde na prensa'
-                    });
+            if (ehObjeto(legado.gradesHeijunka)) Object.entries(legado.gradesHeijunka).forEach(([mes, grade]) => {
+                if (!state.gradesHeijunka[mes] && grade && Array.isArray(grade.dias)) {
+                    state.gradesHeijunka[mes] = grade;
+                    adicionados.meses++;
                 }
+            });
+            mesclarPorId(state.apontamentos, legado.apontamentos, 'apontamentos');
+            mesclarPorId(state.diarioBordo, legado.diarioBordo, 'diario');
+            ordenarRegistros(state.apontamentos);
+            ordenarRegistros(state.diarioBordo);
+            normalizarEstado();
+            return adicionados;
+        }
+
+        function marcarLegadoComoEnviado() {
+            try {
+                const bruto = localStorage.getItem(STORAGE_KEY);
+                if (bruto) localStorage.setItem(LEGADO_ENVIADO_KEY, bruto); // mantém uma cópia de segurança
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e) { /* ignora */ }
+        }
+
+        function enviarDadosLocaisParaNuvem() {
+            const legado = lerDadosLocaisLegados();
+            if (!legado) {
+                showToast('Não há dados da versão anterior salvos neste computador.', 'info');
+                renderMetricasArmazenamento();
+                return;
             }
-            state.apontamentos = apontamentosMock;
+            const resumo = resumirDadosLegados(legado);
+            if (!window.confirm(`Enviar para a nuvem os dados salvos neste computador?\n\n${resumo.texto}\n\nSó serão adicionados registros que ainda não existem na nuvem. Nada será apagado.`)) return;
+            const r = mesclarDadosLocais(legado, false);
+            salvarDadosStorage();
+            marcarLegadoComoEnviado();
+            renderMetricasArmazenamento();
+            showToast(`Enviados: ${r.apontamentos} apontamentos, ${r.diario} ocorrências, ${r.ops} OPs, ${r.produtos} produtos e ${r.meses} mês(es) de programação.`, 'success');
+        }
 
-            state.diarioBordo = [
-                {
-                    id: 'DB-1',
-                    data: `${mes}-09`,
-                    turno: 'Turno 1',
-                    linha: 'NACIONAIS',
-                    criticidade: 'Media',
-                    autor: 'Roberto Líder',
-                    fato: 'Pequena oscilação na temperatura do molde da Linha Nacionais.',
-                    contencao: 'Ajustado termopar e recalibrado ponto de aquecimento.'
-                },
-                {
-                    id: 'DB-2',
-                    data: `${mes}-08`,
-                    turno: 'Turno 2',
-                    linha: 'BANHEIRAS',
-                    criticidade: 'Baixa',
-                    autor: 'Fernando Op',
-                    fato: 'Troca preventiva de vedação concluída com sucesso.',
-                    contencao: 'Linha liberada 15 minutos antes do planejado.'
-                }
-            ];
+        /* DATA E TURNO DE PRODUÇÃO
+           - Usa a data LOCAL do computador (toISOString usava UTC e, depois das 21h, trazia o dia seguinte).
+           - O Turno 2 vai das 17:00 às 05:00: entre 00:00 e 04:59 o apontamento pertence ao dia em que o turno COMEÇOU. */
+        const CAMPOS_TURNO_APONTAMENTO = ['apontTurno', 'horasTurno', 'paradaTurno', 'diarioTurno'];
+        const CAMPOS_DATA_APONTAMENTO = ['apontData', 'horasData', 'paradaData', 'diarioData'];
+        let ultimoTurnoAutomatico = null;
+
+        function formatarDataLocalIso(dataObj) {
+            const ano = dataObj.getFullYear();
+            const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataObj.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function obterTurnoEDataProducao(agora = new Date()) {
+            const horas = agora.getHours();
+            const ehTurno1 = (horas >= 5 && horas < 17);
+            const dataRef = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 12, 0, 0);
+            if (horas < 5) dataRef.setDate(dataRef.getDate() - 1); // madrugada = continuação do Turno 2 do dia anterior
+            return {
+                turno: ehTurno1 ? 'Turno 1' : 'Turno 2',
+                turnoHoras: ehTurno1 ? '05:00 - 17:00' : '17:00 - 05:00',
+                dataProducao: formatarDataLocalIso(dataRef)
+            };
+        }
+
+        function marcarCampoAlteradoPeloUsuario(e) {
+            if (e && e.target) e.target.dataset.modificadoPeloUsuario = '1';
         }
 
         function inicializarDataTurnoEHoras() {
-            const hoje = new Date();
-            const dataHojeIso = hoje.toISOString().split('T')[0];
-
-            ['apontData', 'horasData', 'paradaData', 'diarioData', 'editApontData'].forEach(id => {
+            // Quando o operador escolhe um turno ou data manualmente, o relógio deixa de sobrescrever o campo.
+            [...CAMPOS_TURNO_APONTAMENTO, ...CAMPOS_DATA_APONTAMENTO].forEach(id => {
                 const el = document.getElementById(id);
-                if (el && !el.value) el.value = dataHojeIso;
+                if (el) el.addEventListener('change', marcarCampoAlteradoPeloUsuario);
+            });
+
+            const { dataProducao } = obterTurnoEDataProducao();
+            [...CAMPOS_DATA_APONTAMENTO, 'editApontData'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.value) el.value = dataProducao;
             });
 
             const inputHorasEfetivas = document.getElementById('horasEfetivas');
@@ -1995,20 +2482,28 @@
             const relogioEl = document.getElementById('relogioTopo');
             if (relogioEl) relogioEl.textContent = `${horas.toString().padStart(2, '0')}:${minutos}:${segundos}`;
 
-            const ehTurno1 = (horas >= 5 && horas < 17);
-            const turnoAtual = ehTurno1 ? 'Turno 1' : 'Turno 2';
-            const turnoHoras = ehTurno1 ? '05:00 - 17:00' : '17:00 - 05:00';
+            const { turno: turnoAtual, turnoHoras, dataProducao } = obterTurnoEDataProducao(agora);
 
             const labelTurno = document.getElementById('sidebarShiftLabel');
             const labelHoras = document.getElementById('sidebarShiftHours');
             if (labelTurno) labelTurno.textContent = `${turnoAtual} Ativo`;
             if (labelHoras) labelHoras.textContent = turnoHoras;
 
-            ['apontTurno', 'horasTurno', 'paradaTurno', 'diarioTurno'].forEach(id => {
+            // Na virada de turno, as escolhas manuais do turno anterior deixam de valer.
+            const virouTurno = ultimoTurnoAutomatico !== null && ultimoTurnoAutomatico !== turnoAtual;
+            ultimoTurnoAutomatico = turnoAtual;
+
+            CAMPOS_TURNO_APONTAMENTO.forEach(id => {
                 const el = document.getElementById(id);
-                if (el && !el.dataset.modificadoPeloUsuario) {
-                    el.value = turnoAtual;
-                }
+                if (!el) return;
+                if (virouTurno) delete el.dataset.modificadoPeloUsuario;
+                if (!el.dataset.modificadoPeloUsuario && el.value !== turnoAtual) el.value = turnoAtual;
+            });
+            CAMPOS_DATA_APONTAMENTO.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (virouTurno) delete el.dataset.modificadoPeloUsuario;
+                if (!el.dataset.modificadoPeloUsuario && el.value !== dataProducao) el.value = dataProducao;
             });
         }
 
@@ -2721,6 +3216,7 @@
 
             const selOp = document.getElementById('apontOp');
             if (selOp) {
+                const opSelecionadaAntes = selOp.value;
                 selOp.innerHTML = '';
                 const opsAtivas = state.ops.filter(o => {
                     const statusOk = o.status === 'Em Produção';
@@ -2742,12 +3238,16 @@
                         opt.textContent = `${op.numero} - ${prod ? prod.nome : 'Item'} (${op.linha})`;
                         selOp.appendChild(opt);
                     });
-                    atualizarInfoOpSelecionada(opsAtivas[0].id);
+                    const opMantida = opsAtivas.find(o => o.id === opSelecionadaAntes);
+                    const opAlvo = opMantida ? opMantida.id : opsAtivas[0].id;
+                    selOp.value = opAlvo;
+                    atualizarInfoOpSelecionada(opAlvo);
                 }
             }
 
             const selMotivo = document.getElementById('paradaMotivo');
             if (selMotivo) {
+                const motivoAntes = selMotivo.value;
                 selMotivo.innerHTML = '';
                 state.motivosParada.forEach(m => {
                     const opt = document.createElement('option');
@@ -2755,6 +3255,7 @@
                     opt.textContent = m;
                     selMotivo.appendChild(opt);
                 });
+                if (motivoAntes && state.motivosParada.includes(motivoAntes)) selMotivo.value = motivoAntes;
             }
 
             renderMuralDiarioBordo();
@@ -2974,14 +3475,14 @@
                 card.innerHTML = `
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${corBadge}">${item.criticidade.toUpperCase()}</span>
-                            <span class="font-bold text-white">${item.linha}</span>
-                            <span class="text-slate-400 font-mono">${item.data} (${item.turno})</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${corBadge}">${escaparHtml(String(item.criticidade || '').toUpperCase())}</span>
+                            <span class="font-bold text-white">${escaparHtml(item.linha)}</span>
+                            <span class="text-slate-400 font-mono">${escaparHtml(item.data)} (${escaparHtml(item.turno)})</span>
                         </div>
-                        <span class="text-slate-400 text-[11px]">${item.autor}</span>
+                        <span class="text-slate-400 text-[11px]">${escaparHtml(item.autor)}</span>
                     </div>
-                    <div class="text-slate-200"><strong class="text-slate-400">Fato:</strong> ${item.fato}</div>
-                    <div class="text-emerald-300 bg-emerald-950/20 p-2 rounded-lg border border-emerald-800/30"><strong class="text-emerald-400">Contenção:</strong> ${item.contencao}</div>
+                    <div class="text-slate-200 whitespace-pre-line"><strong class="text-slate-400">Fato:</strong> ${escaparHtml(item.fato)}</div>
+                    <div class="text-emerald-300 bg-emerald-950/20 p-2 rounded-lg border border-emerald-800/30 whitespace-pre-line"><strong class="text-emerald-400">Contenção:</strong> ${escaparHtml(item.contencao)}</div>
                 `;
                 mural.appendChild(card);
             });
@@ -3065,7 +3566,7 @@
 
                         mixHtml += `
                             <span class="px-2 py-0.5 rounded-lg border text-[10px] font-bold ${corLinha}">
-                                ${prd.codigo}: ${q}
+                                ${escaparHtml(prd.codigo)}: ${q}
                             </span>
                         `;
                     });
@@ -3284,9 +3785,9 @@
                         itensHtml += `
                             <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-tbx-card border border-tbx-border/60 text-xs">
                                 <div class="flex-1">
-                                    <div class="font-bold text-white">${prd.nome}</div>
+                                    <div class="font-bold text-white">${escaparHtml(prd.nome)}</div>
                                     <div class="text-[10px] text-slate-400 font-mono">
-                                        Cód: ${prd.codigo} | Ciclo: ${prd.tempoCiclo}s | <span class="text-amber-400 font-semibold">Gargalo: ${prd.tempoGargalo}s</span>
+                                        Cód: ${escaparHtml(prd.codigo)} | Ciclo: ${prd.tempoCiclo}s | <span class="text-amber-400 font-semibold">Gargalo: ${prd.tempoGargalo}s</span>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-1.5">
@@ -3456,11 +3957,12 @@
             if (!modelo) return;
 
             let diasAfetados = 0;
-            const hhtModelo = modelo.hht !== undefined ? modelo.hht : Number(((modelo.operadores || 4) * 10.5).toFixed(1));
+            const operadoresModelo = Math.max(0, Number(modelo.operadores) || 0);
+            const hhtModelo = modelo.hht !== undefined ? Number(modelo.hht) || 0 : Number((operadoresModelo * 10.5).toFixed(1));
 
             grade.dias.forEach(d => {
                 if (d.ehUtil && d.dia !== diaOrigem) {
-                    d.operadores = modelo.operadores || 4;
+                    d.operadores = operadoresModelo;
                     d.hht = hhtModelo;
                     d.itens = JSON.parse(JSON.stringify(modelo.itens || {}));
                     diasAfetados++;
@@ -3591,7 +4093,8 @@
                 if (a.tipo === 'PRODUCAO') {
                     badgeTipo = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PROD</span>';
                     const prod = state.produtos.find(p => p.id === a.produtoId);
-                    detalhe = `<span class="font-mono font-bold text-white">${a.opId || '-'}</span> <span class="text-slate-400">(${prod ? prod.nome : 'Item'})</span>`;
+                    const opRef = state.ops.find(o => o.id === a.opId);
+                    detalhe = `<span class="font-mono font-bold text-white">${escaparHtml(opRef ? opRef.numero : (a.opId || '-'))}</span> <span class="text-slate-400">(${escaparHtml(prod ? prod.nome : 'Item')})</span>`;
                     valor = `<strong class="text-emerald-400">${a.qtd} pçs</strong> <span class="text-[10px] text-slate-400">(${a.tempoPadraoHoras || 0}h)</span>`;
                 } else if (a.tipo === 'HORAS') {
                     badgeTipo = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">HHT</span>';
@@ -3599,7 +4102,7 @@
                     valor = `<strong class="text-purple-400">${a.totalHht}h HHT</strong>`;
                 } else if (a.tipo === 'PARADA') {
                     badgeTipo = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">PARADA</span>';
-                    detalhe = `<span class="text-amber-300 font-semibold">${a.motivo}</span> ${a.obs ? `<span class="text-slate-400">(${a.obs})</span>` : ''}`;
+                    detalhe = `<span class="text-amber-300 font-semibold">${escaparHtml(a.motivo)}</span> ${a.obs ? `<span class="text-slate-400">(${escaparHtml(a.obs)})</span>` : ''}`;
                     valor = `<strong class="text-amber-400">${a.duracaoMinutos} min</strong> <span class="text-[10px] text-slate-400">(${(a.duracaoMinutos/60).toFixed(1)}h)</span>`;
                 }
 
@@ -3612,7 +4115,7 @@
                     <td class="py-2.5 px-2 font-sans font-bold text-white">${a.linha || '-'}</td>
                     <td class="py-2.5 px-3 font-sans">${detalhe}</td>
                     <td class="py-2.5 px-3 text-right">${valor}</td>
-                    <td class="py-2.5 px-2 font-sans text-slate-400">${a.responsavel || a.operador || '-'}</td>
+                    <td class="py-2.5 px-2 font-sans text-slate-400">${escaparHtml(a.responsavel || a.operador || '-')}</td>
                     <td class="py-2.5 px-2 text-center font-sans">
                         <div class="flex items-center justify-center space-x-1.5">
                             <button onclick="abrirModalManutencao('${a.id}')" title="Retificar" class="p-1 rounded bg-tbx-surface hover:text-sky-400 text-slate-400 border border-tbx-border">
@@ -3808,7 +4311,7 @@
                 elParecer.innerHTML = `
                     No fechamento de <strong>${formatarMesAno(mes)}</strong>, a manufatura TBX atingiu uma produção realizada de <strong>${m.totalRealizado.toLocaleString('pt-BR')} peças</strong> (${m.atingimento.toFixed(1)}% do planejado), o que ${statusMeta}.
                     O índice de produtividade padrão/HHT foi de <strong>${m.eficienciaOperacional.toFixed(1)}%</strong>. A disponibilidade e o OEE não foram calculados porque o app ainda não registra tempo planejado de máquina nem perdas de qualidade.
-                    Foram dedicadas <strong>${m.totalHht.toFixed(1)} horas de equipe (HHT)</strong>, com registro de <strong>${(m.minutosParadasTotais/60).toFixed(1)}h de paradas</strong>. O principal ofensor mecânico/operacional foi <strong>${m.maiorMotivoParada}</strong>.
+                    Foram dedicadas <strong>${m.totalHht.toFixed(1)} horas de equipe (HHT)</strong>, com registro de <strong>${(m.minutosParadasTotais/60).toFixed(1)}h de paradas</strong>. O principal ofensor mecânico/operacional foi <strong>${escaparHtml(m.maiorMotivoParada)}</strong>.
                 `;
             }
 
@@ -3970,17 +4473,17 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                     <div class="text-box">
                         Entregues <strong>${m.totalRealizado.toLocaleString('pt-BR')} peças conformes</strong> contra meta de <strong>${m.metaReferencia.toLocaleString('pt-BR')} peças</strong> (${m.atingimento.toFixed(1)}% de atendimento).
                         O índice de produtividade padrão/HHT atingiu <strong>${m.eficienciaOperacional.toFixed(1)}%</strong>. Disponibilidade e OEE não são apresentados como indicadores válidos sem tempo planejado de máquina e dados de qualidade.
-                        Foram alocadas <strong>${m.totalHht.toFixed(1)}h HHT</strong> e registradas <strong>${(m.minutosParadasTotais/60).toFixed(1)}h de parada</strong> (Maior ofensor: ${m.maiorMotivoParada}).
+                        Foram alocadas <strong>${m.totalHht.toFixed(1)}h HHT</strong> e registradas <strong>${(m.minutosParadasTotais/60).toFixed(1)}h de parada</strong> (Maior ofensor: ${escaparHtml(m.maiorMotivoParada)}).
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div>
                             <div class="section-title">Pontos Fortes & Superações</div>
-                            <div class="text-box" style="min-height: 80px;">${notas.pontosFortes || 'Nenhum ponto registrado.'}</div>
+                            <div class="text-box" style="min-height: 80px; white-space: pre-line;">${escaparHtml(notas.pontosFortes || 'Nenhum ponto registrado.')}</div>
                         </div>
                         <div>
                             <div class="section-title">Plano de Ação & Prioridades</div>
-                            <div class="text-box" style="min-height: 80px;">${notas.planoAcao || 'Nenhum plano registrado.'}</div>
+                            <div class="text-box" style="min-height: 80px; white-space: pre-line;">${escaparHtml(notas.planoAcao || 'Nenhum plano registrado.')}</div>
                         </div>
                     </div>
 
@@ -4040,6 +4543,7 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
             if (lblTotal) lblTotal.textContent = `${state.ops.length} OPs`;
 
             if (selProd) {
+                const prodAntes = selProd.value;
                 selProd.innerHTML = '';
                 state.produtos.forEach(p => {
                     const opt = document.createElement('option');
@@ -4047,6 +4551,7 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                     opt.textContent = `${p.nome} (${p.codigo}) - ${p.linha}`;
                     selProd.appendChild(opt);
                 });
+                if (prodAntes && state.produtos.some(p => p.id === prodAntes)) selProd.value = prodAntes;
             }
 
             if (!corpo) return;
@@ -4065,8 +4570,8 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-tbx-hover transition-colors font-mono';
                 tr.innerHTML = `
-                    <td class="py-2.5 px-3 font-bold text-white">${op.numero}</td>
-                    <td class="py-2.5 px-3 font-sans text-slate-300">${prod ? prod.nome : '-'}</td>
+                    <td class="py-2.5 px-3 font-bold text-white">${escaparHtml(op.numero)}</td>
+                    <td class="py-2.5 px-3 font-sans text-slate-300">${escaparHtml(prod ? prod.nome : '-')}</td>
                     <td class="py-2.5 px-2 font-sans font-bold text-white">${op.linha}</td>
                     <td class="py-2.5 px-2 text-right text-slate-300">${op.qtdPlanejada}</td>
                     <td class="py-2.5 px-2 text-right text-emerald-400 font-bold">${real}</td>
@@ -4233,8 +4738,8 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-tbx-hover transition-colors font-mono';
                 tr.innerHTML = `
-                    <td class="py-2.5 px-3 font-bold text-white">${p.codigo}</td>
-                    <td class="py-2.5 px-3 font-sans text-slate-300">${p.nome}</td>
+                    <td class="py-2.5 px-3 font-bold text-white">${escaparHtml(p.codigo)}</td>
+                    <td class="py-2.5 px-3 font-sans text-slate-300">${escaparHtml(p.nome)}</td>
                     <td class="py-2.5 px-2 font-sans font-bold text-white">${p.linha}</td>
                     <td class="py-2.5 px-2 text-right text-slate-300">${p.tempoCiclo}s</td>
                     <td class="py-2.5 px-2 text-right text-amber-400 font-bold">${tempoGarg}s</td>
@@ -4445,7 +4950,7 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                 const li = document.createElement('li');
                 li.className = 'flex items-center justify-between p-2.5 rounded-lg bg-tbx-surface border border-tbx-border';
                 li.innerHTML = `
-                    <span class="text-white font-semibold">${m}</span>
+                    <span class="text-white font-semibold">${escaparHtml(m)}</span>
                     <button onclick="excluirMotivoParada(${idx})" class="text-slate-400 hover:text-tbx-red">
                         <i data-lucide="trash" class="w-3.5 h-3.5"></i>
                     </button>
@@ -4497,6 +5002,9 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
             if (elApont) elApont.textContent = `${state.apontamentos.length} registros`;
             if (elDiario) elDiario.textContent = `${state.diarioBordo.length} ocorrências`;
 
+            const btnLegado = document.getElementById('btnEnviarDadosLocais');
+            if (btnLegado) btnLegado.classList.toggle('hidden', !lerDadosLocaisLegados());
+
             const inputExp = document.getElementById('inputExpurgoMes');
             if (inputExp && !inputExp.value) inputExp.value = state.mesCompetencia;
         }
@@ -4540,7 +5048,9 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                             showToast('O backup não contém produtos válidos. Os dados atuais foram mantidos.', 'error');
                             return;
                         }
+                        if (!window.confirm('Restaurar este backup vai SUBSTITUIR os dados na nuvem para TODOS os computadores.\n\nRegistros que não estão no arquivo serão apagados. Recomenda-se baixar um backup atual antes.\n\nDeseja continuar?')) return;
                         state = importado;
+                        exclusaoEmMassaAutorizada = true;
                         salvarDadosStorage();
                         trocarAba(state.currentTab || 'dashboard');
                         showToast('Backup restaurado e carregado com sucesso!', 'success');
@@ -4568,6 +5078,7 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
             state.diarioBordo = state.diarioBordo.filter(d => !(d.data && d.data.startsWith(mes)));
             delete state.gradesHeijunka[mes];
 
+            exclusaoEmMassaAutorizada = true;
             salvarDadosStorage();
             renderMetricasArmazenamento();
             showToast(`Dados de ${formatarMesAno(mes)} excluídos com sucesso!`, 'info');
@@ -4585,6 +5096,7 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
                 if (m < mesCorte) delete state.gradesHeijunka[m];
             });
 
+            exclusaoEmMassaAutorizada = true;
             salvarDadosStorage();
             renderMetricasArmazenamento();
             showToast('Histórico anterior ao mês de corte foi expurgado com sucesso.', 'info');
@@ -4609,6 +5121,10 @@ ${notas.planoAcao || 'Nenhum registrado'}`;
             state.pinSeguranca = DEFAULT_PIN;
             salvarDadosStorage();
             showToast('PIN restaurado para o padrão 1234.', 'info');
+        }
+
+        function escaparHtml(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         function formatarMesAno(mesIso) {
