@@ -65,8 +65,8 @@
                         <span>Visão Geral & KPIs</span>
                     </button>
                     <button onclick="switchTab('kanban')" id="nav-kanban" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all whitespace-nowrap">
-                        <i class="fa-solid fa-columns w-5 text-center"></i>
-                        <span>Fluxo de Atividades</span>
+                        <i class="fa-solid fa-rotate w-5 text-center"></i>
+                        <span>Ciclo PDCA (Quadro)</span>
                     </button>
                     <button onclick="switchTab('processes')" id="nav-processes" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all whitespace-nowrap">
                         <i class="fa-solid fa-sitemap w-5 text-center"></i>
@@ -84,7 +84,7 @@
                 <!-- Mini Timer Pomodoro / Foco -->
                 <div class="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Foco BPM</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Timer de Foco</span>
                         <span id="timer-status" class="w-2 h-2 rounded-full bg-slate-400"></span>
                     </div>
                     <div class="flex items-center justify-between">
@@ -223,94 +223,86 @@
                             </div>
                         </div>
 
-                        <!-- Distribuição por Fase do Ciclo BPM -->
+                        <!-- Distribuição por Fase do Ciclo PDCA -->
                         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
                             <div>
-                                <h3 class="font-bold text-base mb-1">Ciclo de Vida BPM</h3>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Distribuição atual das suas atividades</p>
+                                <h3 class="font-bold text-base mb-1">Distribuição Ciclo PDCA</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Status das iniciativas de melhoria contínua</p>
                                 <div id="bpm-distribution" class="space-y-4">
                                     <!-- Barras de progresso via JS -->
                                 </div>
                             </div>
                             <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                                    <span>Taxa de Conclusão Geral</span>
-                                    <span id="completion-rate" class="font-bold text-slate-800 dark:text-white">0%</span>
+                                <div class="flex items-center justify-between text-xs mb-1.5">
+                                    <span class="font-medium text-slate-500 dark:text-slate-400">Taxa de Padronização (Act)</span>
+                                    <span id="completion-rate" class="font-bold text-emerald-600 dark:text-emerald-400">0%</span>
                                 </div>
-                                <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
-                                    <div id="completion-bar" class="h-full bg-brand-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div id="completion-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- ==================== ABA 2: KANBAN FLUXO BPM ==================== -->
+                <!-- ==================== ABA 2: KANBAN CICLO PDCA ==================== -->
                 <section id="tab-kanban" class="tab-content hidden space-y-4">
-                    <!-- Barra de Busca e Filtro de Tipo -->
+                    <!-- Barra de Busca -->
                     <div class="flex flex-col sm:flex-row gap-3 justify-between bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                         <div class="relative flex-1">
                             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                             <input type="text" id="search-task" onkeyup="renderKanban()" placeholder="Buscar atividade, processo ou stakeholder..." class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
                         </div>
-                        <select id="type-filter" onchange="renderKanban()" class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                            <option value="ALL">Todos os Tipos</option>
-                            <option value="Mapeamento AS-IS">Mapeamento AS-IS</option>
-                            <option value="Desenho TO-BE">Desenho TO-BE</option>
-                            <option value="Documentação POP">Documentação POP</option>
-                            <option value="Automação / RPA">Automação / RPA</option>
-                            <option value="Auditoria / KPI">Auditoria / KPI</option>
-                        </select>
                     </div>
 
-                    <!-- Colunas Kanban (4 estágios clássicos de BPM) -->
+                    <!-- Colunas Kanban (4 estágios do Ciclo PDCA) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
-                        <!-- Coluna 1: Levantamento / Backlog -->
-                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'backlog')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
+                        <!-- Coluna 1: P - Plan (Planejar) -->
+                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'plan')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
                             <div class="flex items-center justify-between mb-3 px-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                                    <h4 class="font-bold text-sm">Levantamento / Backlog</h4>
+                                    <span class="w-5 h-5 rounded-md bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">P</span>
+                                    <h4 class="font-bold text-sm">Plan (Planejar)</h4>
                                 </div>
-                                <span id="count-backlog" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">0</span>
+                                <span id="count-plan" class="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">0</span>
                             </div>
-                            <div id="col-backlog" class="space-y-3 min-h-[200px]"></div>
+                            <div id="col-plan" class="space-y-3 min-h-[200px]"></div>
                         </div>
 
-                        <!-- Coluna 2: Mapeamento & Análise -->
-                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'mapping')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
+                        <!-- Coluna 2: D - Do (Executar) -->
+                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'do')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
                             <div class="flex items-center justify-between mb-3 px-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                                    <h4 class="font-bold text-sm">Mapeamento & Análise</h4>
+                                    <span class="w-5 h-5 rounded-md bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">D</span>
+                                    <h4 class="font-bold text-sm">Do (Executar)</h4>
                                 </div>
-                                <span id="count-mapping" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">0</span>
+                                <span id="count-do" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">0</span>
                             </div>
-                            <div id="col-mapping" class="space-y-3 min-h-[200px]"></div>
+                            <div id="col-do" class="space-y-3 min-h-[200px]"></div>
                         </div>
 
-                        <!-- Coluna 3: Validação & Homologação -->
-                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'validation')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
+                        <!-- Coluna 3: C - Check (Verificar) -->
+                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'check')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
                             <div class="flex items-center justify-between mb-3 px-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                                    <h4 class="font-bold text-sm">Validação / Homologação</h4>
+                                    <span class="w-5 h-5 rounded-md bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center">C</span>
+                                    <h4 class="font-bold text-sm">Check (Verificar)</h4>
                                 </div>
-                                <span id="count-validation" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">0</span>
+                                <span id="count-check" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">0</span>
                             </div>
-                            <div id="col-validation" class="space-y-3 min-h-[200px]"></div>
+                            <div id="col-check" class="space-y-3 min-h-[200px]"></div>
                         </div>
 
-                        <!-- Coluna 4: Implantado / Publicado -->
-                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'done')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
+                        <!-- Coluna 4: A - Act (Agir / Padronizar) -->
+                        <div ondragover="allowDrop(event)" ondrop="dropTask(event, 'act')" class="bg-slate-100/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 transition-colors">
                             <div class="flex items-center justify-between mb-3 px-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                                    <h4 class="font-bold text-sm">Implantado / POP Ativo</h4>
+                                    <span class="w-5 h-5 rounded-md bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center">A</span>
+                                    <h4 class="font-bold text-sm">Act (Padronizar)</h4>
                                 </div>
-                                <span id="count-done" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">0</span>
+                                <span id="count-act" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">0</span>
                             </div>
-                            <div id="col-done" class="space-y-3 min-h-[200px]"></div>
+                            <div id="col-act" class="space-y-3 min-h-[200px]"></div>
                         </div>
                     </div>
                 </section>
@@ -320,7 +312,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                         <div>
                             <h3 class="font-bold text-base">Repositório de Processos & POPs</h3>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Controle de maturidade, versão de documentação (BPMN) e donos de processo (Process Owners).</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Controle de maturidade, padronização de POPs e donos de processo (Process Owners).</p>
                         </div>
                         <button onclick="openProcessModal()" class="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:opacity-90 transition flex items-center gap-2 self-start sm:self-auto">
                             <i class="fa-solid fa-folder-plus"></i>
@@ -382,24 +374,23 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tipo de Entrega BPM</label>
-                        <select id="task-type" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                            <option value="Mapeamento AS-IS">Mapeamento AS-IS</option>
-                            <option value="Desenho TO-BE">Desenho TO-BE</option>
-                            <option value="Documentação POP">Documentação POP</option>
-                            <option value="Automação / RPA">Automação / RPA</option>
-                            <option value="Auditoria / KPI">Auditoria / KPI</option>
-                        </select>
-                    </div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Área / Departamento</label>
+                    <select id="task-dept" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+                        <option value="Operações">Operações</option>
+                        <option value="Financeiro">Financeiro</option>
+                        <option value="RH">Recursos Humanos</option>
+                        <option value="Comercial">Comercial</option>
+                        <option value="TI & Sistemas">TI & Sistemas</option>
+                    </select>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Estágio</label>
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Fase PDCA</label>
                         <select id="task-status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                            <option value="backlog">Levantamento</option>
-                            <option value="mapping">Mapeamento</option>
-                            <option value="validation">Validação</option>
-                            <option value="done">Implantado</option>
+                            <option value="plan">P - Plan (Planejar)</option>
+                            <option value="do">D - Do (Executar)</option>
+                            <option value="check">C - Check (Verificar)</option>
+                            <option value="act">A - Act (Padronizar)</option>
                         </select>
                     </div>
                     <div>
@@ -411,27 +402,21 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Prazo</label>
-                        <input type="date" id="task-due" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Prazo Entrega</label>
+                        <input type="date" id="task-due" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Stakeholder / Ponto Focal</label>
-                    <input type="text" id="task-stakeholder" placeholder="Ex: Ana Silva (Coord. Financeira)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+                    <input type="text" id="task-stakeholder" placeholder="Ex: Mariana Costa (BP RH)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Checklist / Notas de Entrevista</label>
-                    <textarea id="task-notes" rows="3" placeholder="Ex: Validar SLA de aprovação, checar integração ERP..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm"></textarea>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Diagnóstico / Causa Raiz (Plan)</label>
+                    <textarea id="task-notes" rows="2" placeholder="Ex: Ishikawa / 5 Porquês: Atraso ocorre por aprovação manual em 3 planilhas..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm"></textarea>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Ferramenta / Notação</label>
-                        <input type="text" id="task-tool" placeholder="Ex: Bizagi (BPMN 2.0), Power Automate..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">KPI / Meta de Ganho</label>
-                        <input type="text" id="task-kpi" placeholder="Ex: Reduzir SLA de 5d para 24h" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Meta / Indicador (Check)</label>
+                    <input type="text" id="task-kpi" placeholder="Ex: Reduzir SLA de 5d para 24h" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeModal('task-modal')" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
@@ -550,7 +535,6 @@
                     <div class="flex items-center gap-2 flex-wrap">
                         <span id="det-priority" class="text-xs font-bold px-2.5 py-0.5 rounded-md">Alta</span>
                         <span id="det-dept" class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800">Área</span>
-                        <span id="det-type" class="text-xs font-bold text-brand-600 dark:text-brand-400">Tipo</span>
                     </div>
                     <h3 id="det-title" class="text-xl font-bold text-slate-900 dark:text-white leading-snug">Título do Projeto</h3>
                 </div>
@@ -567,10 +551,10 @@
 
             <!-- Corpo Rolável do Detalhamento -->
             <div class="p-6 flex-1 overflow-y-auto space-y-6">
-                <!-- Metadados do Projeto BPM -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <!-- Metadados do Projeto PDCA -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                        <span class="block text-[10px] uppercase font-semibold text-slate-400">Etapa Atual</span>
+                        <span class="block text-[10px] uppercase font-semibold text-slate-400">Fase PDCA</span>
                         <span id="det-status" class="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5 block">-</span>
                     </div>
                     <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
@@ -578,28 +562,24 @@
                         <span id="det-due" class="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5 block">-</span>
                     </div>
                     <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                        <span class="block text-[10px] uppercase font-semibold text-slate-400">Ferramenta</span>
-                        <span id="det-tool" class="text-xs font-bold text-brand-600 dark:text-brand-400 mt-0.5 block truncate">-</span>
-                    </div>
-                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                        <span class="block text-[10px] uppercase font-semibold text-slate-400">Meta / KPI</span>
+                        <span class="block text-[10px] uppercase font-semibold text-slate-400">Meta / KPI (Check)</span>
                         <span id="det-kpi" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">-</span>
                     </div>
                 </div>
 
                 <!-- Stakeholder & Contexto -->
                 <div class="space-y-2">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Stakeholder & Escopo Técnico</h4>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Stakeholder & Diagnóstico / Causa Raiz (Plan)</h4>
                     <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
                         <p class="text-xs text-slate-600 dark:text-slate-300"><strong class="text-slate-800 dark:text-white">Ponto Focal:</strong> <span id="det-stakeholder">-</span></p>
                         <p id="det-notes" class="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">-</p>
                     </div>
                 </div>
 
-                <!-- Checklist de Entregáveis BPM (Subtarefas) -->
+                <!-- Checklist de Entregáveis PDCA (Subtarefas) -->
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Checklist de Entregáveis & Etapas</h4>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Plano de Ação & Entregáveis PDCA</h4>
                         <span id="det-checklist-progress" class="text-xs font-bold text-brand-600 dark:text-brand-400">0/0 concluídos</span>
                     </div>
 
@@ -613,7 +593,7 @@
 
                     <!-- Adicionar novo item no checklist -->
                     <form onsubmit="addChecklistItem(event)" class="flex gap-2 pt-1">
-                        <input type="text" id="new-check-item" required placeholder="Adicionar etapa (ex: Validar raias BPMN com gestor)..." class="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                        <input type="text" id="new-check-item" required placeholder="Adicionar etapa (ex: Validar plano de ação com gestor)..." class="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
                         <button type="submit" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition">
                             <i class="fa-solid fa-plus"></i> Adicionar
                         </button>
@@ -639,7 +619,7 @@
                     <i class="fa-solid fa-trash"></i> Excluir Projeto
                 </button>
                 <button id="det-advance-btn" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition flex items-center gap-2">
-                    <span>Avançar Etapa no Fluxo</span>
+                    <span>Avançar Fase PDCA</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
@@ -744,7 +724,13 @@
                     if (snap.exists()) {
                         const data = snap.data();
                         isRemoteUpdate = true;
-                        if (data.tasks) window.appState.tasks = JSON.parse(data.tasks);
+                        const legacyMap = { backlog: 'plan', mapping: 'do', validation: 'check', done: 'act' };
+                        if (data.tasks) {
+                            window.appState.tasks = JSON.parse(data.tasks).map(t => ({
+                                ...t,
+                                status: legacyMap[t.status] || t.status
+                            }));
+                        }
                         if (data.processes) window.appState.processes = JSON.parse(data.processes);
                         if (data.bottlenecks) window.appState.bottlenecks = JSON.parse(data.bottlenecks);
                         window.renderAll();
@@ -767,106 +753,97 @@
     </script>
 
     <script>
-        // ==================== ESTADO INICIAL (MOCK REALISTA PARA ANALISTA DE PROCESSOS) ====================
+        // ==================== ESTADO INICIAL (MOCK REALISTA PARA CICLO PDCA) ====================
         let state = {
             tasks: [
                 {
                     id: 't1',
-                    title: 'Mapeamento AS-IS: Onboarding de Novos Colaboradores',
+                    title: 'Redução de SLA: Onboarding de Novos Colaboradores',
                     dept: 'RH',
-                    type: 'Mapeamento AS-IS',
-                    status: 'mapping',
+                    status: 'do',
                     priority: 'Alta',
-                    due: '2026-11-15',
+                    due: '2026-11-20',
                     stakeholder: 'Mariana Costa (BP RH)',
-                    tool: 'Bizagi Modeler (BPMN 2.0)',
                     kpi: 'Reduzir tempo de setup de 5 dias para 24h',
-                    notes: 'Entrevistar TI para entender atraso na criação de acessos e entrega de notebook.',
+                    notes: '[Plan] Causa raiz: Criação de acessos e entrega de notebook dependem de aprovações sequenciais por e-mail.',
                     checklist: [
-                        { id: 'c1', text: 'Entrevista de levantamento com BP de RH', done: true },
-                        { id: 'c2', text: 'Mapear swimlanes (RH, TI, Gestor, Facilities)', done: true },
-                        { id: 'c3', text: 'Identificar gargalos de SLA na entrega de equipamentos', done: false },
-                        { id: 'c4', text: 'Apresentar diagrama AS-IS para validação', done: false }
+                        { id: 'c1', text: '[P] Levantamento de causa raiz (5 Porquês) com RH e TI', done: true },
+                        { id: 'c2', text: '[D] Desenhar fluxo paralelo entre RH, TI e Facilities', done: true },
+                        { id: 'c3', text: '[C] Medir tempo médio das próximas 10 admissões piloto', done: false },
+                        { id: 'c4', text: '[A] Publicar POP atualizado e treinar analistas', done: false }
                     ],
                     logs: [
-                        { date: '11/11 14:30', text: 'Alinhado com TI: criação de e-mail depende de aprovação manual da diretoria.' },
-                        { date: '09/11 10:00', text: 'Kick-off realizado com Mariana Costa.' }
+                        { date: '14/11 14:30', text: '[Do] Alinhado com TI: criação de e-mail iniciará automaticamente após assinatura digital do contrato.' },
+                        { date: '11/11 10:00', text: '[Plan] Kick-off e definição de meta (< 24h) com Mariana Costa.' }
                     ]
                 },
                 {
                     id: 't2',
-                    title: 'Redesenho TO-BE: Fluxo de Aprovação de Compras',
+                    title: 'Otimização Fluxo de Aprovação de Compras',
                     dept: 'Financeiro',
-                    type: 'Desenho TO-BE',
-                    status: 'validation',
+                    status: 'check',
                     priority: 'Alta',
-                    due: '2026-11-14',
+                    due: '2026-11-18',
                     stakeholder: 'Roberto Almeida (Controller)',
-                    tool: 'Visio + Power Automate',
                     kpi: 'Eliminar 70% das aprovações em papel',
-                    notes: 'Eliminar 2 níveis de assinatura física para compras abaixo de R$ 2.500.',
+                    notes: '[Plan] Gargalo de 4 dias aguardando 2 assinaturas físicas para compras operacionais abaixo de R$ 2.500.',
                     checklist: [
-                        { id: 'c5', text: 'Definir alçadas automáticas de aprovação', done: true },
-                        { id: 'c6', text: 'Desenhar fluxo futuro (TO-BE) com gateway exclusivo', done: true },
-                        { id: 'c7', text: 'Homologação final com Controller e Diretoria', done: false }
+                        { id: 'c5', text: '[P] Definir matriz de alçadas automáticas', done: true },
+                        { id: 'c6', text: '[D] Implantar fluxo piloto digital', done: true },
+                        { id: 'c7', text: '[C] Auditar amostra de 30 pedidos da semana', done: false },
+                        { id: 'c7b', text: '[A] Oficializar política de compras e encerrar ciclo', done: false }
                     ],
                     logs: [
-                        { date: '12/11 09:15', text: 'Controller aprovou a regra de alçada até R$ 2.500 sem assinatura física.' }
+                        { date: '15/11 09:15', text: '[Check] Primeira semana de piloto reduziu o tempo de aprovação de 96h para 6h.' }
                     ]
                 },
                 {
                     id: 't3',
-                    title: 'Elaborar POP-OPE-04: Expedição e Logística Reversa',
+                    title: 'Padronização POP-OPE-04: Expedição e Logística Reversa',
                     dept: 'Operações',
-                    type: 'Documentação POP',
-                    status: 'backlog',
+                    status: 'plan',
                     priority: 'Média',
-                    due: '2026-11-20',
+                    due: '2026-11-25',
                     stakeholder: 'Lucas Ferreira (Sup. Logística)',
-                    tool: 'Confluence / Notion + BPMN',
                     kpi: 'Zero divergência de romaneio',
-                    notes: 'Padronizar checklist de conferência antes da coleta da transportadora.',
+                    notes: '[Plan] Identificada taxa de 4,5% de devolução por falha na conferência de volumes antes da coleta.',
                     checklist: [
-                        { id: 'c8', text: 'Acompanhar operação in loco na doca de expedição', done: false },
-                        { id: 'c9', text: 'Redigir passo a passo operacional e matriz RACI', done: false }
+                        { id: 'c8', text: '[P] Estratificar motivos de divergência (Pareto 80/20)', done: false },
+                        { id: 'c9', text: '[D] Testar checklist de dupla conferência na doca 2', done: false }
                     ],
                     logs: []
                 },
                 {
                     id: 't4',
-                    title: 'Especificação RPA: Conciliação Bancária Diária',
+                    title: 'Automação: Conciliação Bancária Diária',
                     dept: 'TI & Sistemas',
-                    type: 'Automação / RPA',
-                    status: 'done',
+                    status: 'act',
                     priority: 'Alta',
-                    due: '2026-11-10',
+                    due: '2026-11-12',
                     stakeholder: 'Fernanda Lima (Tech Lead)',
-                    tool: 'UiPath / PDD Técnico',
-                    kpi: 'Economia de 22h/mês da equipe financeira',
-                    notes: 'Fluxo BPMN aprovado. Economia estimada de 22h/mês da equipe financeira.',
+                    kpi: 'Economia de 22h/mês comprovada',
+                    notes: '[Plan] Processo manual diário de 1h10min sujeito a erro de digitação.',
                     checklist: [
-                        { id: 'c10', text: 'Mapear regras de exceção bancária', done: true },
-                        { id: 'c11', text: 'Entregar PDD (Process Definition Document) para TI', done: true }
+                        { id: 'c10', text: '[P/D] Especificar regras e homologar automação', done: true },
+                        { id: 'c11', text: '[C/A] Validar 100% de acurácia e padronizar POP-FIN-09', done: true }
                     ],
                     logs: [
-                        { date: '10/11 17:00', text: 'Documento PDD assinado e entregue para sprint de desenvolvimento RPA.' }
+                        { date: '12/11 17:00', text: '[Act] Ciclo PDCA concluído com sucesso! POP-FIN-09 publicado.' }
                     ]
                 },
                 {
                     id: 't5',
-                    title: 'Auditoria de SLA: Atendimento Pós-Venda B2B',
+                    title: 'Redução de TMA: Atendimento Pós-Venda B2B',
                     dept: 'Comercial',
-                    type: 'Auditoria / KPI',
-                    status: 'mapping',
+                    status: 'do',
                     priority: 'Média',
-                    due: '2026-11-18',
+                    due: '2026-11-22',
                     stakeholder: 'Thiago Souza (Ger. CS)',
-                    tool: 'Power BI + Excel',
                     kpi: 'TMA (Tempo Médio Atendimento) < 4h',
-                    notes: 'Levantar tempo médio de primeira resposta e motivos de escalonamento.',
+                    notes: '[Plan] Tickets ficam parados na triagem por falta de definição clara de responsabilidade técnica.',
                     checklist: [
-                        { id: 'c12', text: 'Extrair base de tickets dos últimos 90 dias', done: true },
-                        { id: 'c13', text: 'Classificar causas raiz de atraso (Diagrama de Ishikawa)', done: false }
+                        { id: 'c12', text: '[P] Diagrama de Ishikawa sobre causas de escalonamento', done: true },
+                        { id: 'c13', text: '[D] Aplicar roteamento automático por categoria de cliente', done: false }
                     ],
                     logs: []
                 }
@@ -888,7 +865,7 @@
         // ==================== NAVEGAÇÃO & TEMA ====================
         const tabMeta = {
             dashboard: { title: 'Visão Geral & KPIs', subtitle: 'Acompanhe suas entregas de mapeamento, automação e melhoria contínua.' },
-            kanban: { title: 'Fluxo de Atividades BPM', subtitle: 'Gerencie suas demandas desde o levantamento AS-IS até a publicação do POP.' },
+            kanban: { title: 'Ciclo PDCA (Quadro de Melhoria)', subtitle: 'Gerencie cada iniciativa pelas fases Plan (Planejar), Do (Executar), Check (Verificar) e Act (Padronizar).' },
             processes: { title: 'Catálogo de Processos & POPs', subtitle: 'Inventário corporativo de processos, donos (Owners) e níveis de maturidade.' },
             bottlenecks: { title: 'Gargalos & Oportunidades Kaizen', subtitle: 'Identifique desperdícios e mensure horas economizadas com redesenho de fluxos.' }
         };
@@ -993,7 +970,7 @@
         function renderDashboard() {
             const { tasks, processes, bottlenecks } = getFilteredData();
 
-            const activeTasks = tasks.filter(t => t.status !== 'done').length;
+            const activeTasks = tasks.filter(t => t.status !== 'act').length;
             const totalSavedHours = bottlenecks.reduce((acc, b) => acc + Number(b.hours), 0);
             const openBottlenecks = bottlenecks.filter(b => !b.resolved).length;
 
@@ -1004,10 +981,10 @@
 
             // Lista de Prioridades
             const priorityList = document.getElementById('priority-list');
-            const urgentTasks = tasks.filter(t => t.status !== 'done').slice(0, 4);
+            const urgentTasks = tasks.filter(t => t.status !== 'act').slice(0, 4);
 
             if (urgentTasks.length === 0) {
-                priorityList.innerHTML = `<div class="text-center py-8 text-sm text-slate-400">Nenhuma atividade pendente neste filtro. Excelente trabalho!</div>`;
+                priorityList.innerHTML = `<div class="text-center py-8 text-sm text-slate-400">Nenhum ciclo PDCA pendente neste filtro. Excelente trabalho!</div>`;
             } else {
                 priorityList.innerHTML = urgentTasks.map(t => `
                     <div onclick="openTaskDetail('${t.id}')" class="cursor-pointer p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 hover:border-brand-500/60 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1015,24 +992,24 @@
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${getPriorityBadge(t.priority)}">${t.priority}</span>
                                 <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">${t.dept}</span>
-                                <span class="text-xs text-brand-600 dark:text-brand-400 font-semibold">${t.type}</span>
+                                <span class="text-xs text-brand-600 dark:text-brand-400 font-semibold">${statusLabels[t.status] || t.status}</span>
                             </div>
                             <h4 class="font-semibold text-sm text-slate-800 dark:text-slate-100">${t.title}</h4>
                             <p class="text-xs text-slate-500 dark:text-slate-400"><i class="fa-regular fa-user mr-1"></i>${t.stakeholder || 'Sem ponto focal'} • <i class="fa-regular fa-calendar mr-1"></i>${formatDate(t.due)}</p>
                         </div>
                         <button onclick="event.stopPropagation(); advanceTask('${t.id}')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shrink-0 self-start sm:self-center">
-                            Avançar Etapa →
+                            Avançar Fase →
                         </button>
                     </div>
                 `).join('');
             }
 
-            // Distribuição Ciclo BPM
+            // Distribuição Ciclo PDCA
             const stages = [
-                { key: 'backlog', label: 'Levantamento', color: 'bg-slate-400' },
-                { key: 'mapping', label: 'Mapeamento AS-IS/TO-BE', color: 'bg-blue-500' },
-                { key: 'validation', label: 'Validação & Homologação', color: 'bg-amber-500' },
-                { key: 'done', label: 'Implantado / POP Ativo', color: 'bg-emerald-500' }
+                { key: 'plan', label: 'P — Plan (Planejar)', color: 'bg-indigo-600' },
+                { key: 'do', label: 'D — Do (Executar)', color: 'bg-blue-500' },
+                { key: 'check', label: 'C — Check (Verificar)', color: 'bg-amber-500' },
+                { key: 'act', label: 'A — Act (Padronizar)', color: 'bg-emerald-500' }
             ];
 
             const total = tasks.length || 1;
@@ -1052,25 +1029,22 @@
                 `;
             }).join('');
 
-            const doneCount = tasks.filter(t => t.status === 'done').length;
+            const doneCount = tasks.filter(t => t.status === 'act').length;
             const rate = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
             document.getElementById('completion-rate').textContent = `${rate}%`;
             document.getElementById('completion-bar').style.width = `${rate}%`;
         }
 
-        // 2. Renderizar Kanban
+        // 2. Renderizar Kanban PDCA
         function renderKanban() {
             const { tasks } = getFilteredData();
             const search = document.getElementById('search-task').value.toLowerCase();
-            const typeFilter = document.getElementById('type-filter').value;
 
             const filtered = tasks.filter(t => {
-                const matchText = t.title.toLowerCase().includes(search) || (t.stakeholder && t.stakeholder.toLowerCase().includes(search));
-                const matchType = typeFilter === 'ALL' || t.type === typeFilter;
-                return matchText && matchType;
+                return t.title.toLowerCase().includes(search) || (t.stakeholder && t.stakeholder.toLowerCase().includes(search));
             });
 
-            const cols = ['backlog', 'mapping', 'validation', 'done'];
+            const cols = ['plan', 'do', 'check', 'act'];
             cols.forEach(status => {
                 const colTasks = filtered.filter(t => t.status === status);
                 document.getElementById(`count-${status}`).textContent = colTasks.length;
@@ -1097,23 +1071,22 @@
                                 </button>
                             </div>
                         </div>
-                        <span class="inline-block text-[11px] font-semibold text-brand-600 dark:text-brand-400 mb-1">${t.type}</span>
                         <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 leading-snug mb-2">${t.title}</h5>
                         ${t.notes ? `<p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 bg-slate-50 dark:bg-slate-800/70 p-2 rounded-lg">${t.notes}</p>` : ''}
                         ${t.checklist && t.checklist.length > 0 ? `
                             <div class="mb-3 flex items-center gap-2 text-[11px] text-slate-500">
                                 <i class="fa-regular fa-square-check text-brand-500"></i>
-                                <span>${t.checklist.filter(c => c.done).length}/${t.checklist.length} entregáveis</span>
+                                <span>${t.checklist.filter(c => c.done).length}/${t.checklist.length} ações PDCA</span>
                             </div>
                         ` : ''}
                         <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
                             <span class="font-medium truncate max-w-[130px]"><i class="fa-solid fa-building mr-1 text-slate-400"></i>${t.dept}</span>
-                            ${status !== 'done' ? `
+                            ${status !== 'act' ? `
                                 <button onclick="event.stopPropagation(); advanceTask('${t.id}')" class="font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
                                     <span>Avançar</span>
                                     <i class="fa-solid fa-arrow-right"></i>
                                 </button>
-                            ` : `<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-check-double mr-1"></i>Concluído</span>`}
+                            ` : `<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-check-double mr-1"></i>Padronizado</span>`}
                         </div>
                     </div>
                 `}).join('');
@@ -1215,13 +1188,11 @@
             document.getElementById('task-id').value = t.id;
             document.getElementById('task-title').value = t.title;
             document.getElementById('task-dept').value = t.dept;
-            document.getElementById('task-type').value = t.type;
             document.getElementById('task-status').value = t.status;
             document.getElementById('task-priority').value = t.priority;
             document.getElementById('task-due').value = t.due;
             document.getElementById('task-stakeholder').value = t.stakeholder || '';
             document.getElementById('task-notes').value = t.notes || '';
-            document.getElementById('task-tool').value = t.tool || '';
             document.getElementById('task-kpi').value = t.kpi || '';
             document.getElementById('task-modal-title').textContent = 'Editar Atividade';
             openModal('task-modal');
@@ -1235,13 +1206,11 @@
                 id: id || 't' + Date.now(),
                 title: document.getElementById('task-title').value,
                 dept: document.getElementById('task-dept').value,
-                type: document.getElementById('task-type').value,
                 status: document.getElementById('task-status').value,
                 priority: document.getElementById('task-priority').value,
                 due: document.getElementById('task-due').value,
                 stakeholder: document.getElementById('task-stakeholder').value,
                 notes: document.getElementById('task-notes').value,
-                tool: document.getElementById('task-tool').value,
                 kpi: document.getElementById('task-kpi').value,
                 checklist: existing ? existing.checklist : [
                     { id: 'c' + Date.now(), text: 'Levantamento inicial e validação de escopo', done: false }
@@ -1267,10 +1236,10 @@
         let activeDetailTaskId = null;
 
         const statusLabels = {
-            backlog: 'Levantamento / Backlog',
-            mapping: 'Mapeamento AS-IS / TO-BE',
-            validation: 'Validação & Homologação',
-            done: 'Implantado / POP Ativo'
+            plan: 'P — Plan (Planejar)',
+            do: 'D — Do (Executar)',
+            check: 'C — Check (Verificar)',
+            act: 'A — Act (Padronizar)'
         };
 
         function openTaskDetail(id) {
@@ -1285,11 +1254,9 @@
             prioEl.className = `text-xs font-bold px-2.5 py-0.5 rounded-md ${getPriorityBadge(t.priority)}`;
 
             document.getElementById('det-dept').textContent = t.dept;
-            document.getElementById('det-type').textContent = t.type;
             document.getElementById('det-title').textContent = t.title;
             document.getElementById('det-status').textContent = statusLabels[t.status] || t.status;
             document.getElementById('det-due').textContent = formatDate(t.due);
-            document.getElementById('det-tool').textContent = t.tool || 'Não definida';
             document.getElementById('det-kpi').textContent = t.kpi || 'Não definido';
             document.getElementById('det-stakeholder').textContent = t.stakeholder || 'Não informado';
             document.getElementById('det-notes').textContent = t.notes || 'Sem observações técnicas registradas.';
@@ -1301,7 +1268,7 @@
             };
 
             const advBtn = document.getElementById('det-advance-btn');
-            if (t.status === 'done') {
+            if (t.status === 'act') {
                 advBtn.classList.add('hidden');
             } else {
                 advBtn.classList.remove('hidden');
@@ -1411,14 +1378,14 @@
         }
 
         function advanceTask(id) {
-            const order = ['backlog', 'mapping', 'validation', 'done'];
+            const order = ['plan', 'do', 'check', 'act'];
             const t = state.tasks.find(item => item.id === id);
             if (!t) return;
             const nextIdx = order.indexOf(t.status) + 1;
             if (nextIdx < order.length) {
                 t.status = order[nextIdx];
                 renderAll();
-                showToast('Atividade avançada para a próxima etapa!');
+                showToast(`Avançado para ${statusLabels[t.status]}!`);
             }
         }
 
@@ -1530,59 +1497,6 @@
             renderAll();
         }
 
-        function advanceTask(id) {
-            const order = ['backlog', 'mapping', 'validation', 'done'];
-            const t = state.tasks.find(item => item.id === id);
-            if (!t) return;
-            const nextIdx = order.indexOf(t.status) + 1;
-            if (nextIdx < order.length) {
-                t.status = order[nextIdx];
-                renderAll();
-                showToast('Atividade avançada para a próxima etapa!');
-            }
-        }
-
-        function deleteTask(id) {
-            state.tasks = state.tasks.filter(t => t.id !== id);
-            renderAll();
-            showToast('Atividade removida.');
-        }
-
-        function openProcessModal() { openModal('process-modal'); }
-        function saveProcess(e) {
-            e.preventDefault();
-            state.processes.unshift({
-                id: 'p' + Date.now(),
-                code: document.getElementById('proc-code').value.toUpperCase(),
-                name: document.getElementById('proc-name').value,
-                dept: document.getElementById('proc-dept').value,
-                owner: document.getElementById('proc-owner').value,
-                maturity: document.getElementById('proc-maturity').value,
-                leadtime: document.getElementById('proc-leadtime').value
-            });
-            e.target.reset();
-            closeModal('process-modal');
-            renderAll();
-            showToast('Processo registrado no catálogo!');
-        }
-
-        function openBottleneckModal() { openModal('bottleneck-modal'); }
-        function saveBottleneck(e) {
-            e.preventDefault();
-            state.bottlenecks.unshift({
-                id: 'b' + Date.now(),
-                title: document.getElementById('bot-title').value,
-                dept: document.getElementById('bot-dept').value,
-                hours: Number(document.getElementById('bot-hours').value),
-                solution: document.getElementById('bot-solution').value,
-                resolved: false
-            });
-            e.target.reset();
-            closeModal('bottleneck-modal');
-            renderAll();
-            showToast('Gargalo registrado na matriz Kaizen!');
-        }
-
         function toggleBottleneck(id) {
             const b = state.bottlenecks.find(item => item.id === id);
             if (b) {
@@ -1621,7 +1535,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `flowpulse_bpm_${new Date().toISOString().split('T')[0]}.json`);
+            downloadAnchor.setAttribute("download", `flowpulse_pdca_${new Date().toISOString().split('T')[0]}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
@@ -1630,7 +1544,7 @@
 
         // Helpers UI
         function getSlaStatus(dueStr, status) {
-            if (!dueStr || status === 'done') return null;
+            if (!dueStr || status === 'act') return null;
             const today = new Date().toISOString().split('T')[0];
             if (dueStr < today) return { label: 'Atrasado', cls: 'bg-rose-500 text-white' };
             if (dueStr === today) return { label: 'Hoje', cls: 'bg-amber-500 text-white' };
