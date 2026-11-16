@@ -362,18 +362,7 @@
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Título da Atividade *</label>
                     <input type="text" id="task-title" required placeholder="Ex: Mapear fluxo AS-IS de Reembolso Corporativo" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Área / Departamento</label>
-                        <select id="task-dept" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
-                            <option value="Operações">Operações</option>
-                            <option value="Financeiro">Financeiro</option>
-                            <option value="RH">Recursos Humanos</option>
-                            <option value="Comercial">Comercial</option>
-                            <option value="TI & Sistemas">TI & Sistemas</option>
-                        </select>
-                    </div>
-                    <div>
+                <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Área / Departamento</label>
                     <select id="task-dept" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
                         <option value="Operações">Operações</option>
@@ -655,6 +644,7 @@
         let auth = null;
         let currentUser = null;
         let isRemoteUpdate = false;
+        let initialCloudLoaded = false;
 
         try {
             if (firebaseConfig && firebaseConfig.apiKey) {
@@ -684,7 +674,7 @@
         }
 
         window.persistState = async function () {
-            if (!db || !currentUser || isRemoteUpdate) return;
+            if (!db || !currentUser || isRemoteUpdate || !initialCloudLoaded) return;
             try {
                 updateSyncStatus('saving', 'Salvando...');
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'workspace', 'mainState');
@@ -697,7 +687,7 @@
                 updateSyncStatus('online', 'Nuvem Ativa');
             } catch (error) {
                 console.error("Erro ao salvar na nuvem:", error);
-                updateSyncStatus('local', 'Erro Sync');
+                updateSyncStatus('local', 'Erro Permissão');
             }
         };
 
@@ -711,7 +701,8 @@
                 }
             } catch (error) {
                 console.error("Erro na autenticação:", error);
-                updateSyncStatus('local', 'Falha Auth');
+                updateSyncStatus('local', 'Ativar Auth Anônima');
+                return;
             }
 
             onAuthStateChanged(auth, (user) => {
@@ -721,6 +712,7 @@
 
                 const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'workspace', 'mainState');
                 onSnapshot(docRef, (snap) => {
+                    initialCloudLoaded = true;
                     if (snap.exists()) {
                         const data = snap.data();
                         isRemoteUpdate = true;
@@ -733,7 +725,7 @@
                         }
                         if (data.processes) window.appState.processes = JSON.parse(data.processes);
                         if (data.bottlenecks) window.appState.bottlenecks = JSON.parse(data.bottlenecks);
-                        window.renderAll();
+                        window.renderAll(false);
                         if (window.activeDetailTaskId) window.openTaskDetail(window.activeDetailTaskId);
                         isRemoteUpdate = false;
                     } else {
@@ -742,12 +734,12 @@
                     }
                 }, (err) => {
                     console.error("Erro no listener em tempo real:", err);
-                    updateSyncStatus('local', 'Erro Leitura');
+                    updateSyncStatus('local', 'Erro Regras DB');
                 });
             });
         }
 
-        window.addEventListener('load', () => {
+        window.addEventListener('DOMContentLoaded', () => {
             initCloudSync();
         });
     </script>
@@ -955,12 +947,12 @@
             };
         }
 
-        function renderAll() {
+        function renderAll(shouldPersist = true) {
             renderDashboard();
             renderKanban();
             renderProcesses();
             renderBottlenecks();
-            if (typeof window.persistState === 'function') {
+            if (shouldPersist && typeof window.persistState === 'function') {
                 window.persistState();
             }
         }
@@ -1583,9 +1575,9 @@
         });
 
         // Inicialização
-        window.onload = () => {
-            renderAll();
-        };
+        window.addEventListener('DOMContentLoaded', () => {
+            renderAll(false);
+        });
     </script>
 </body>
 </html>
