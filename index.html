@@ -140,10 +140,10 @@
                     </button>
 
                     <!-- Indicador de Sincronização na Nuvem -->
-                    <div id="sync-badge" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-500 dark:text-slate-400" title="Status de Sincronização">
+                    <button type="button" onclick="showCloudDiagnostic()" id="sync-badge" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 transition" title="Clique para ver detalhes da conexão Firebase">
                         <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                         <span id="sync-text">Conectando...</span>
-                    </div>
+                    </button>
                 </div>
             </header>
 
@@ -644,7 +644,7 @@
         let auth = null;
         let currentUser = null;
         let isRemoteUpdate = false;
-        let initialCloudLoaded = false;
+        let lastCloudError = null;
 
         try {
             if (firebaseConfig && firebaseConfig.apiKey) {
@@ -656,7 +656,8 @@
             }
         } catch (err) {
             console.error("Erro ao inicializar Firebase:", err);
-            updateSyncStatus('local', 'Modo Local');
+            lastCloudError = err.message;
+            updateSyncStatus('local', 'Erro Init');
         }
 
         function updateSyncStatus(status, text) {
@@ -669,12 +670,22 @@
             } else if (status === 'saving') {
                 dot.className = 'w-2 h-2 rounded-full bg-blue-500 animate-ping';
             } else {
-                dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                dot.className = 'w-2 h-2 rounded-full bg-rose-500';
             }
         }
 
+        window.showCloudDiagnostic = function () {
+            if (lastCloudError) {
+                showToast(`Firebase (${appId}): ${lastCloudError}`);
+            } else if (currentUser) {
+                showToast(`Conectado! UID: ${currentUser.uid}`);
+            } else {
+                showToast('Aguardando autenticação no Firebase...');
+            }
+        };
+
         window.persistState = async function () {
-            if (!db || !currentUser || isRemoteUpdate || !initialCloudLoaded) return;
+            if (!db || !currentUser || isRemoteUpdate) return;
             try {
                 updateSyncStatus('saving', 'Salvando...');
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'workspace', 'mainState');
@@ -683,11 +694,14 @@
                     processes: JSON.stringify(window.appState.processes),
                     bottlenecks: JSON.stringify(window.appState.bottlenecks),
                     updatedAt: new Date().toISOString()
-                });
-                updateSyncStatus('online', 'Nuvem Ativa');
+                }, { merge: true });
+                lastCloudError = null;
+                updateSyncStatus('online', 'Salvo na Nuvem');
             } catch (error) {
                 console.error("Erro ao salvar na nuvem:", error);
-                updateSyncStatus('local', 'Erro Permissão');
+                lastCloudError = `${error.code || 'erro'}: ${error.message}`;
+                updateSyncStatus('local', 'Falha ao Salvar');
+                showToast('Erro ao salvar no Firebase. Clique no status no topo para ver.');
             }
         };
 
@@ -701,6 +715,7 @@
                 }
             } catch (error) {
                 console.error("Erro na autenticação:", error);
+                lastCloudError = `Auth (${error.code}): Ative o login Anônimo no Console Firebase.`;
                 updateSyncStatus('local', 'Ativar Auth Anônima');
                 return;
             }
@@ -708,11 +723,11 @@
             onAuthStateChanged(auth, (user) => {
                 if (!user) return;
                 currentUser = user;
+                lastCloudError = null;
                 updateSyncStatus('online', 'Nuvem Ativa');
 
                 const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'workspace', 'mainState');
                 onSnapshot(docRef, (snap) => {
-                    initialCloudLoaded = true;
                     if (snap.exists()) {
                         const data = snap.data();
                         isRemoteUpdate = true;
@@ -728,12 +743,13 @@
                         window.renderAll(false);
                         if (window.activeDetailTaskId) window.openTaskDetail(window.activeDetailTaskId);
                         isRemoteUpdate = false;
+                        updateSyncStatus('online', 'Nuvem Ativa');
                     } else {
-                        // Primeiro acesso: envia os dados iniciais de exemplo para a nuvem
                         window.persistState();
                     }
                 }, (err) => {
                     console.error("Erro no listener em tempo real:", err);
+                    lastCloudError = `Firestore (${err.code}): Verifique as Regras de Segurança no Firebase.`;
                     updateSyncStatus('local', 'Erro Regras DB');
                 });
             });
@@ -1320,7 +1336,30 @@
                 item.done = !item.done;
                 renderDetailChecklist(t);
                 renderKanban();
+                if (typeof window.persistState === 'function') window.persistState();
             }
+        }
+
+        function addChecklistItem(e) {
+            e.preventDefault();
+            const t = state.tasks.find(item => item.id === activeDetailTaskId);
+            const input = document.getElementById('new-check-item');
+            if (!t || !input.value.trim()) return;
+            t.checklist.push({ id: 'c' + Date.now(), text: input.value.trim(), done: false });
+            input.value = '';
+            renderDetailChecklist(t);
+            renderKanban();
+            if (typeof window.persistState === 'function') window.persistState();
+        }
+
+        function removeChecklistItem(checkId) {
+            const t = state.tasks.find(item => item.id === activeDetailTaskId);
+            if (!t) return;
+            t.checklist = t.checklist.filter(c => c.id !== checkId);
+            renderDetailChecklist(t);
+            renderKanban();
+            if (typeof window.persistState === 'function') window.persistState();
+        }
         }
 
         function addChecklistItem(e) {
@@ -1366,6 +1405,7 @@
             t.logs.unshift({ date: stamp, text: input.value.trim() });
             input.value = '';
             renderDetailLogs(t);
+            if (typeof window.persistState === 'function') window.persistState();
             showToast('Registro adicionado ao diário de bordo!');
         }
 
